@@ -159,7 +159,8 @@ Feel free to create issues and/or pull requests on the repo !
 Many thanks to:
 
 * Mika Borner (https://github.com/my2ndhead) and Simon Balz (https://github.com/simcen) for Alert
-  Manager (https://github.com/alertmanager/alert_manager). Event Masker app is inspired by Alert Manager suppression rule logic
+  Manager (https://github.com/alertmanager/alert_manager). Event Masker app is inspired by Alert Manager suppression rule engine.
+  
 # External Lib
 
 This project use external lib under MIT Licence to works :
