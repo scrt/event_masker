@@ -1,0 +1,51 @@
+{
+  "schemaVersion": "2.0.0",
+  "info": {
+    "title": "Event Masker",
+    "id": {
+      "group": null,
+      "name": "event_masker",
+      "version": "2021.04.01"
+    },
+    "author": [
+      {
+        "name": "SCRT Analytics",
+        "email": "research@scrt.ch",
+        "company": "SCRT"
+      }
+    ],
+    "releaseDate": null,
+    "description": "Event Masker is a Splunk extended command to mask event from search.",
+    "classification": {
+      "intendedAudience": null,
+      "categories": ["IT Operations", "Utility"],
+      "developmentStatus": "Beta"
+    },
+    "commonInformationModels": null,
+    "license": {
+      "name": "CC BY-NC-SA 4.0",
+      "text": "./LICENSE.txt",
+      "uri": "https://creativecommons.org/licenses/by-nc-sa/4.0/"
+    },
+    "privacyPolicy": {
+      "name": null,
+      "text": null,
+      "uri": null
+    },
+    "releaseNotes": {
+      "name": null,
+      "text": "./README.md",
+      "uri": null
+    }
+  },
+  "dependencies": { 
+	"Python": {
+		"version": ">=3"
+	}
+    },
+  "tasks": null,
+  "inputGroups": null,
+  "incompatibleApps": null,
+  "supportedDeployments": [ "_standalone" ],
+  "targetWorkloads": ["_search_heads"]
+}

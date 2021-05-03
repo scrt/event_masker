@@ -1,0 +1,14 @@
+name: Tests
+
+on:
+  push: # {branches: main}
+  pull_request: # {branches: main}
+
+jobs:
+  test:
+    runs-on: ubuntu-20.04 # To get python 3.7+ (actually, python 3.8. It would be cleaner to check against python version(s) provided with Splunk currently
+    name: Run tests
+    steps:
+      - uses: actions/checkout@v2
+      - run: |
+          ./run_tests.sh

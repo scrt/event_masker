@@ -1,0 +1,217 @@
+<div tabindex="-1" class="rule-edit-modal modal fade in hide">
+    <div class="modal-header">
+        <button type="button" class="close btn-dialog-close" data-dismiss="modal">x</button>
+        <h3 class="text-dialog-title">Add/Edit Rule</h3>
+    </div>
+    <div class="modal-body form form-horizontal modal-body-scrolling" style="padding-left: 0px; padding-right: 0px;">
+
+        <div id="rule-title-controls" class="control-group shared-controls-controlgroup">
+            <label class="control-label" for="rule-title">
+                Title: </label>
+            <div class="controls ">
+                <input type="text" name="rule-title" id="rule-title"/>
+                <span class="help-inline"></span>
+            </div>
+        </div>
+
+        <div id="rule-description-controls" class="control-group shared-controls-controlgroup">
+            <label class="control-label" for="rule-description">
+                Description: </label>
+            <div class="controls ">
+                <textarea name="rule-description" id="rule-description"></textarea>
+                <span class="help-inline"></span>
+            </div>
+        </div>
+
+        <div class="control-group shared-controls-controlgroup">
+            <label class="control-label" for="rule-type">
+                Rule type: </label>
+            <div class="controls ">
+                <select id="rule-type">
+                    <option value="normal">Normal</option>
+                    <option value="false-positive">False-positive</option>
+                    <option value="maintenance">Maintenance window</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="control-group shared-controls-controlgroup">
+            <label class="control-label" for="rule-match-type">
+                Match type: </label>
+            <div class="controls ">
+                <select id="rule-match-type">
+                    <option value="all">All (AND)</option>
+                    <option value="any">Any (OR)</option>
+                </select>
+            </div>
+        </div>
+
+        <div id="rule-scope-controls" class="control-group shared-controls-controlgroup">
+            <label class="control-label" for="rule-scope">
+                Scope: </label>
+            <div class="controls ">
+                <textarea name="rule-scope" id="rule-scope"></textarea>
+                <span class="help-inline"></span>
+            </div>
+        </div>
+
+        <div id="rule-comment-controls" class="control-group shared-controls-controlgroup">
+            <label class="control-label" for="rule-comment">
+                Comment: </label>
+            <div class="controls ">
+                <textarea name="rule-comment" id="rule-comment"></textarea>
+                <span class="help-inline"></span>
+            </div>
+        </div>
+
+        <div id="rule-startDate-controls" class="control-group shared-controls-controlgroup">
+            <label class="control-label" for="rule-startDate">
+                Start date: </label>
+            <div class="controls ">
+                <input type="date" name="rule-startDate_date" id="rule-startDate_date">
+                <input type="time" name="rule-startDate_time" id="rule-startDate_time">
+                <span class="help-inline"></span>
+            </div>
+        </div>
+
+        <div id="rule-endDate-controls" class="control-group shared-controls-controlgroup">
+            <label class="control-label" for="rule-endDate">
+                End date: </label>
+            <div class="controls ">
+                <input type="date" name="rule-endDate_date" id="rule-endDate_date">
+                <input type="time" name="rule-endDate_time" id="rule-endDate_time">
+                <span class="help-inline"></span>
+            </div>
+        </div>
+
+        <input type="hidden" name="rule-key" id="rule-key"/>
+    </div>
+    <div class="modal-footer">
+        <a href="#" class="btn btn-dialog-cancel label_from_data pull-left" data-dismiss="modal"
+           style="display: inline;">Cancel</a>
+        <div class="loading pull-left"></div>
+        <a href="#" class="btn btn-primary pull-right save save_rule" style="display: inline;">Save</a>
+    </div>
+</div>
+
+
+<div tabindex="-1" class="import-json-modal modal fade in hide">
+    <div class="modal-header">
+        <button type="button" class="close btn-dialog-close" data-dismiss="modal">x</button>
+        <h3 class="text-dialog-title">Import JSON files</h3>
+        You can import one or multiple JSON files in Event Masker using this form. You can download <a class="download_json" href="../../static/app/event_masker/example.json" download>here</a> an example file of the requested JSON structure.
+    </div>
+    <div class="modal-body form form-horizontal modal-body-scrolling" style="padding-left: 0px; padding-right: 0px;">
+        <div id="multiple_files-controls" class="control-group shared-controls-controlgroup">
+            <label class="control-label" for="multiple_files">
+                Files: </label>
+            <div id="multiple_files_div" class="controls ">
+                <input type="file" name="multiple_files" id="multiple_files" accept="application/JSON" multiple/>
+                <span class="help-inline"></span>
+            </div>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <a href="#" class="btn btn-dialog-cancel label_from_data pull-left" data-dismiss="modal"
+           style="display: inline;">Cancel</a>
+        <div class="loading pull-left"></div>
+        <a href="#" id="importButton" class="btn btn-primary pull-right save import-json-files" style="display: inline;">Import</a>
+    </div>
+</div>
+
+<div id="table-container" ></div>
+<script type="text/x-template" id="rule-list-template">
+
+        <% if(allow_editing_collection && !insufficient_permissions){ %>
+    <a href="#" class="btn btn-primary pull-left add_rule"
+       style="position: relative; top: 22px; margin-right: 10px; display: block;z-index: 1000;">Add Rule</a>
+
+       <a href="#" class="btn btn-primary pull-left export_json"
+       style="position: relative; top: 22px; margin-right: 10px; display: block;z-index: 1000;">Export</a>
+       <a href="#" class="btn btn-primary pull-left select_json_files"
+       style="position: relative; top: 22px; margin-right: 10px; display: block;z-index: 1000;">Import</a>
+        <div id="selectedLinks" style="display:none">
+            <a href="#" class="btn btn-primary pull-left export_selected_json"
+            style="position: relative; top: 22px; margin-right: 10px; display: block;z-index: 1000;">Export selected</a>
+            <a href="#" id="deleteSelected" class="btn btn-primary pull-left delete_selected"
+            style="position: relative; top: 22px; margin-right: 10px; display: block;z-index: 1000;">Delete selected</a>
+            <a href="#" id="enableSelected" class="btn btn-primary pull-left enable_selected"
+            style="position: relative; top: 22px; margin-right: 10px; display: block;z-index: 1000;">Enable selected</a>
+            <a href="#" id="disableSelected" class="btn btn-primary pull-left disable_selected"
+            style="position: relative; top: 22px; margin-right: 10px; display: block;z-index: 1000;">Disable selected</a>
+        </div>
+        <% } %>
+    <div style="margin-top: auto;"></div>
+    <table id="table"  class="table table-striped display">
+        <thead>
+        <tr>
+            <th></th>
+            <th>Key</th>
+            <th>Title</th>
+            <th>Description</th>
+            <th>Match Type</th>
+            <th>Rule Type</th>
+            <th>Scope</th>
+            <th>Comment</th>
+            <th>Conditions</th><% if (!insufficient_permissions){ %>
+            <th>Start date</th>
+            <th>End date</th>
+            <th>Creation date</th>
+            <th>Creation User</th>
+            <th>Last modified</th>
+            <th>Modification User</th>
+            <th>Actions</th> <% } %>
+        </tr>
+        </thead>
+        <tbody>
+            <% for(var c = 0; c < rules.length; c++){
+                rule = rules[c];                
+                //editorUrl = "o";
+                editorUrl = editor + "?" + $.param( { 'key': rule._key } );
+                nbConditions = 0;
+                if (rules[c].conditions != undefined) {
+                    nbConditions = rules[c].conditions.length;
+                }
+            %>
+        <tr>
+            <td></td>
+            <td><%- rules[c]._key %></td>
+            <td><a href="<%- editorUrl %>"><%- rules[c].title %></a></td>
+            <td><%- rules[c].description %></td>
+            <td><%- rules[c].match_type %></td>
+            <td><%- rules[c].type %></td>
+            <td><%- rules[c].scope %></td>
+            <td><%- rules[c].comment %></td>
+            <td><%- nbConditions %></td>
+            <td><%- rules[c].startDate %></td>
+            <td><%- rules[c].endDate %></td>
+            <td><%- rules[c].creationDate %></td>
+            <td><%- rules[c].creationUser %></td>
+            <td><%- rules[c].modificationDate %></td>
+            <td><%- rules[c].modificationUser %></td>
+
+            <% if(!insufficient_permissions){ %>
+            <td>
+                <% if(allow_editing_collection){ %>
+                <% if(rules[c].disabled){ %>
+                <a class="enable_rule" data-disabled="false" data-key="<%- rule._key %>"
+                   href="#">Enable</a> |
+                <% } else { %>
+                <a class="disable_rule" data-disabled="true" data-key="<%- rule._key %>"
+                   href="#">Disable</a> |
+                <% } %>
+                <a class="edit_rule" data-key="<%- rule._key %>"
+                   data-title="<%- rule.title %>"
+                   data-type="<%- rule.type %>" data-scope="<%- rule.scope %>"
+                   data-comment="<%- rule.comment %>"
+                   href="#">Edit properties</a>
+                | <a class="remove_rule" data-key="<%- rule._key %>" href="#">Remove</a>
+                | <a class="clone_rule" data-key="<%- rule._key %>" href="#">Clone</a>
+                <% } %>
+            </td>
+            <% } %>
+        </tr>
+            <% } %>
+        </tbody>
+    </table>
+</script>

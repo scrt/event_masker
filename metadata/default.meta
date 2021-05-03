@@ -1,0 +1,49 @@
+[]
+access = read : [ admin ], write : [ admin ]
+owner = nobody
+export = system
+
+[views]
+access = read : [ admin ], write : [ admin ]
+export = none
+owner = nobody
+
+[datamodels]
+access = read : [ admin ], write : [ admin ]
+export = system
+owner = nobody
+
+[models]
+access = read : [ admin ], write : [ admin ]
+export = system
+owner = nobody
+
+[transforms]
+access = read : [ admin ], write : [ admin ]
+export = system
+owner = nobody
+
+[nav]
+access = read : [ admin ], write : [ admin ]
+export = none
+owner = nobody
+
+[collections]
+access = read : [ admin ], write : [ admin ]
+export = system
+owner = nobody
+
+[savedsearches]
+access = read : [ admin ], write : [ admin ]
+export = system
+owner = nobody
+
+[savedsearches/mask_command_logs_audit]
+access = read : [ admin ], write : [ admin ]
+export = system
+owner = nobody
+
+[views/event_masker_rules_edit]
+access = read : [ admin ], write : [ admin ]
+export = none
+owner = nobody

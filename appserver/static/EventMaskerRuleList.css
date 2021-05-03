@@ -1,0 +1,77 @@
+.dataTables_length
+{
+margin-top: 28px;
+}
+
+.dataTables_paginate
+{
+  margin-top: -55px;
+}
+
+table.dataTable thead th.select-checkbox.sorting_disabled {
+  position: relative;
+}
+table.dataTable thead th.select-checkbox:before,
+table.dataTable th.select-checkbox.sorting_disabled.selected:after {
+  display: block;
+  position: absolute;
+  top: 1.2em;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  box-sizing: border-box;
+}
+table.dataTable thead td.select-checkbox:before,
+table.dataTable thead th.select-checkbox.sorting_disabled:before {
+  content: ' ';
+  margin-top: -6px;
+  margin-left: -6px;
+  border: 1px solid black;
+  border-radius: 3px;
+}
+
+table.dataTable thead th.select-checkbox.sorting_disabled.selected:after {
+	content: "✓";
+	font-size: 20px;
+	margin-top: -19px;
+	margin-left: -6px;
+	text-align: center;
+	text-shadow: 1px 1px #b0bed9, -1px -1px #b0bed9, 1px -1px #b0bed9, -1px 1px #b0bed9
+	
+}
+
+table.dataTable tr.odd td.sorting_1 {
+  background-color: #f5f5f5 !important;
+}
+
+table.dataTable tr.odd td.sorting_2 {
+  background-color: #f5f5f5 !important;
+}
+
+table.dataTable tr.odd td.sorting_3 {
+  background-color: #f5f5f5 !important;
+}
+
+table.dataTable tr.even td.sorting_1 {
+  background-color: #ffffff !important;
+}
+
+table.dataTable tr.even td.sorting_2 {
+  background-color: #ffffff !important;
+}
+
+table.dataTable tr.even td.sorting_3 {
+  background-color: #ffffff !important;
+}
+
+table.dataTable {
+  font-size: 11px;
+}
+
+table.dataTable > tbody > tr > td, table.dataTable > thead > tr > th {
+  padding: 3px 10px 3px 10px;
+}
+
+table.dataTable.no-footer {
+  border-bottom: 0px solid #111;
+}

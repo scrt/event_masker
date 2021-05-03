@@ -1,0 +1,54 @@
+[
+    {
+      "title": "rule1",
+      "description": "description1",
+      "type": "normal",
+      "match_type": "any",
+      "scope": "scope1",
+      "comment": "comment1",
+      "startDate": "2021-04-01T16:00",
+      "endDate": "2021-07-14T15:59",
+      "modificationDate": "2021-04-30T15:57",
+      "modificationUser": "admin",
+      "creationDate": "2021-04-30T15:56",
+      "disabled": false,
+      "creationUser": "admin",
+      "conditions": [
+        {
+          "field": "condition1",
+          "operator": "is",
+          "value": "value1",
+          "iscasesensitive": true
+        }
+      ]
+    },
+    {
+      "title": "rule2",
+      "description": "description2",
+      "type": "normal",
+      "match_type": "all",
+      "scope": "scope2",
+      "comment": "comment2",
+      "startDate": "",
+      "endDate": "",
+      "modificationDate": "2021-04-30T15:58",
+      "modificationUser": "admin",
+      "creationDate": "2021-04-30T15:58",
+      "disabled": false,
+      "creationUser": "admin",
+      "conditions": [
+        {
+          "field": "condition2",
+          "operator": "ends with",
+          "value": "value2",
+          "iscasesensitive": false
+        },
+        {
+          "field": "condition2",
+          "operator": "starts with",
+          "value": "value2",
+          "iscasesensitive": false
+        }
+      ]
+    }
+  ]

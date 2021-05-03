@@ -1,0 +1,10 @@
+<dashboard script="event_masker_rules_list.js" isDashboard="false" hideEdit="true">
+    <label>Event Masker Rules</label>
+    <row>
+        <html id="element1">
+            <div id="event_masker_rules">
+                Loading
+            </div>
+        </html>
+    </row>
+</dashboard>

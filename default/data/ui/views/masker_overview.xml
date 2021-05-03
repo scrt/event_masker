@@ -1,0 +1,108 @@
+<form>
+  <label>Event Masker Overview</label>
+  <description>Helper Dashboard to audit Event Masker rules.</description>
+  <search id="basesearch">
+    <query>
+| inputlookup event_masker_rules
+    </query>
+  </search>
+  <row>
+    <panel>
+      <title>Total rules</title>
+      <single>
+        <search base="basesearch">
+          <query>search
+| stats count</query>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </single>
+    </panel>
+    <panel>
+      <title>Disabled rule</title>
+      <single>
+        <search base="basesearch">
+          <query>search
+| where disabled=1
+| stats count</query>
+        </search>
+        <option name="colorMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="rangeColors">["0xdc4e41","0xdc4e41"]</option>
+        <option name="rangeValues">[0]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Rule type</title>
+      <chart>
+        <search base="basesearch">
+          <query>search
+| stats count by type</query>
+        </search>
+        <option name="charting.chart">pie</option>
+        <option name="charting.drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+    <panel>
+      <title>Events Masked count</title>
+      <input type="time" token="tk_time" searchWhenChanged="true">
+      <label></label>
+      <default>
+        <earliest>-24h@h</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+      <single>
+        <search>
+          <query>index IN (_internal, audit) sourcetype="event_masker*" "masked record:"
+| rex "scope=\"(?&lt;scope&gt;[^\s]+)\" result=\"(?&lt;result&gt;.*)\""
+| dedup _time, scope, result
+| where like (result,"values match")
+| stats count</query>
+          <earliest>$tk_time.earliest$</earliest>
+          <latest>$tk_time.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="showSparkline">0</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <option name="trendDisplayMode">absolute</option>
+      </single>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Rule validity period remaining time &lt; X days</title>
+      <input type="text" token="tk_days" searchWhenChanged="true">
+        <label>Days</label>
+        <default>15</default>
+      </input>
+      <table>
+        <search base="basesearch">
+          <query>search
+| fields title, endDate
+| eval now=now()
+| eval end=strptime(endDate,"%Y-%m-%dT%H:%M")
+| eval TimeDiff=end-now
+| eval remaining_time_day=floor(TimeDiff/86400)
+| where remaining_time_day &lt; $tk_days$
+| table title, remaining_time_day
+| rename title as Rule, remaining_time_day as "Remaining time in day"</query>
+        </search>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="rowNumbers">false</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+  </row>
+</form>

@@ -1,0 +1,6 @@
+<nav search_view="search">
+  <view name="masker_rules" default="true"/>
+  <view name="masker_overview"/>
+  <view name="masker_logs"/>
+  <view name="search" />
+</nav>
