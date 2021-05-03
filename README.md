@@ -1,6 +1,6 @@
 [![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg)](http://creativecommons.org/licenses/by-nc/4.0/)
-[![Tests](https://github.com/scrt/suppression_editor/actions/workflows/actions.yml/badge.svg?branch=event_masker)](https://github.com/scrt/suppression_editor/actions/workflows/actions.yml)
-[![GitHub release](https://img.shields.io/github/release/Naereen/StrapDown.js.svg)](https://github.com/scrt/suppression_editor/releases/)
+[![Tests](https://github.com/scrt/event_masker/actions/workflows/actions.yml/badge.svg)](https://github.com/scrt/event_masker/actions/workflows/actions.yml)
+[![GitHub release](https://img.shields.io/github/release/scrt/event_masker.svg)](https://github.com/scrt/event_masker/releases/)
 
 # Event Masker
 <p align="center">
@@ -160,7 +160,6 @@ Many thanks to:
 
 * Mika Borner (https://github.com/my2ndhead) and Simon Balz (https://github.com/simcen) for Alert
   Manager (https://github.com/alertmanager/alert_manager). Event Masker app is inspired by Alert Manager suppression rule logic
-  
 # External Lib
 
 This project use external lib under MIT Licence to works :
