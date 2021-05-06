@@ -153,6 +153,7 @@ define(['underscore',
 
             doSaveRule: function () {
 
+                // Get datetime
                 var today = new Date();
                 var month = today.getMonth()+1
                 if (month < 10){
@@ -166,8 +167,12 @@ define(['underscore',
                 if (minutes < 10){
                     minutes = "0" + minutes
                 }
+                var hours = today.getHours()
+                if (hours < 10){
+                    hours = "0" + hours
+                }
                 var date = today.getFullYear()+'-'+ month +'-'+ day;
-                var time = today.getHours() + ":" + minutes;
+                var time = hours + ":" + minutes;
                 var dateTime = date+'T'+time;
 
                 var row_data = this.jexcel.getData();

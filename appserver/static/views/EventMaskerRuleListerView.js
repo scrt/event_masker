@@ -136,8 +136,12 @@ define(['underscore',
                 if (minutes < 10){
                     minutes = "0" + minutes
                 }
+                var hours = today.getHours()
+                if (hours < 10){
+                    hours = "0" + hours
+                }
                 var date = today.getFullYear()+'-'+ month +'-'+ day;
-                var time = today.getHours() + ":" + minutes;
+                var time = hours + ":" + minutes;
                 var dateTime = date+'T'+time;
 
 
@@ -402,22 +406,26 @@ define(['underscore',
                 rule = this.getRule(key);
 
                // Get datetime
-               var today = new Date();
-               var month = today.getMonth()+1
-               if (month < 10){
-                   month = "0" + month
-               }
-               var day = today.getDate()
-               if (day < 10){
-                   day = "0" + day
-               }
-               var minutes = today.getMinutes()
-               if (minutes < 10){
-                   minutes = "0" + minutes
-               }
-               var date = today.getFullYear()+'-'+ month +'-'+ day;
-               var time = today.getHours() + ":" + minutes;
-               var dateTime = date+'T'+time;
+                var today = new Date();
+                var month = today.getMonth()+1
+                if (month < 10){
+                    month = "0" + month
+                }
+                var day = today.getDate()
+                if (day < 10){
+                    day = "0" + day
+                }
+                var minutes = today.getMinutes()
+                if (minutes < 10){
+                    minutes = "0" + minutes
+                }
+                var hours = today.getHours()
+                if (hours < 10){
+                    hours = "0" + hours
+                }
+                var date = today.getFullYear()+'-'+ month +'-'+ day;
+                var time = hours + ":" + minutes;
+                var dateTime = date+'T'+time;
                 
                 // Set clone rule with value get previously
                 var rule_clone = {};
@@ -496,7 +504,7 @@ define(['underscore',
                     rule.endDate = "";
                 }
                 
-                // Get datetime and current user
+                // Get datetime
                 var today = new Date();
                 var month = today.getMonth()+1
                 if (month < 10){
@@ -510,8 +518,12 @@ define(['underscore',
                 if (minutes < 10){
                     minutes = "0" + minutes
                 }
+                var hours = today.getHours()
+                if (hours < 10){
+                    hours = "0" + hours
+                }
                 var date = today.getFullYear()+'-'+ month +'-'+ day;
-                var time = today.getHours() + ":" + minutes;
+                var time = hours + ":" + minutes;
                 var dateTime = date+'T'+time;
                 rule.modificationDate = dateTime;
                 rule.modificationUser = currentUser;
