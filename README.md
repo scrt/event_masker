@@ -57,7 +57,8 @@ In Event Masker Rules list (default page):
 * Add rule need at least title and scope
 * You can edit rule properties with "Edit properties" action
 * Renaming a rule has no impact in mask command
-* To use mutilple rule as the same time, you can use the same scope as another rule and use it in mask command
+* To select/unselect mutilple rule, ou must press the key "CTRL" of your keyboard
+* To use multiple rule as the same time, you can use the same scope as another rule and use it in mask command
 * AND rule need at least 2 conditions
 * To edit conditions, click on title field
 * "Start Date" and "End date" are the validity period for a rule. If you not set these fields, your rule will be valid all the time. This functionality will be improved in the next release.
@@ -134,6 +135,8 @@ Do not forget : All of the conditions must be true for a valid application. Make
 
 # Known Limitations
 
+* Multi select on rule list require the CTRL key pressed
+
 * Splunk multi-value (MV) field are supported by Event Masker but at this time, masking rule hide the whole line when conditions are matched.
 
 * Search Head Cluster have not been tested.
@@ -159,7 +162,8 @@ Feel free to create issues and/or pull requests on the repo !
 Many thanks to:
 
 * Mika Borner (https://github.com/my2ndhead) and Simon Balz (https://github.com/simcen) for Alert
-  Manager (https://github.com/alertmanager/alert_manager). Event Masker app is inspired by Alert Manager suppression rule logic
+  Manager (https://github.com/alertmanager/alert_manager). Event Masker app is inspired by Alert Manager suppression rule engine.
+  
 # External Lib
 
 This project use external lib under MIT Licence to works :
