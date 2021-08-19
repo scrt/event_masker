@@ -1,100 +1,3 @@
-<div tabindex="-1" class="rule-edit-modal modal fade in hide">
-    <div class="modal-header">
-        <button type="button" class="close btn-dialog-close" data-dismiss="modal">x</button>
-        <h3 class="text-dialog-title">Add/Edit Rule</h3>
-    </div>
-    <div class="modal-body form form-horizontal modal-body-scrolling" style="padding-left: 0px; padding-right: 0px;">
-
-        <div id="rule-title-controls" class="control-group shared-controls-controlgroup">
-            <label class="control-label" for="rule-title">
-                Title: </label>
-            <div class="controls ">
-                <input type="text" name="rule-title" id="rule-title"/>
-                <span class="help-inline"></span>
-            </div>
-        </div>
-
-        <div id="rule-description-controls" class="control-group shared-controls-controlgroup">
-            <label class="control-label" for="rule-description">
-                Description: </label>
-            <div class="controls ">
-                <textarea name="rule-description" id="rule-description"></textarea>
-                <span class="help-inline"></span>
-            </div>
-        </div>
-
-        <div class="control-group shared-controls-controlgroup">
-            <label class="control-label" for="rule-type">
-                Rule type: </label>
-            <div class="controls ">
-                <select id="rule-type">
-                    <option value="normal">Normal</option>
-                    <option value="false-positive">False-positive</option>
-                    <option value="maintenance">Maintenance window</option>
-                </select>
-            </div>
-        </div>
-
-        <div class="control-group shared-controls-controlgroup">
-            <label class="control-label" for="rule-match-type">
-                Match type: </label>
-            <div class="controls ">
-                <select id="rule-match-type">
-                    <option value="all">All (AND)</option>
-                    <option value="any">Any (OR)</option>
-                </select>
-            </div>
-        </div>
-
-        <div id="rule-scope-controls" class="control-group shared-controls-controlgroup">
-            <label class="control-label" for="rule-scope">
-                Scope: </label>
-            <div class="controls ">
-                <textarea name="rule-scope" id="rule-scope"></textarea>
-                <span class="help-inline"></span>
-            </div>
-        </div>
-
-        <div id="rule-comment-controls" class="control-group shared-controls-controlgroup">
-            <label class="control-label" for="rule-comment">
-                Comment: </label>
-            <div class="controls ">
-                <textarea name="rule-comment" id="rule-comment"></textarea>
-                <span class="help-inline"></span>
-            </div>
-        </div>
-
-        <div id="rule-startDate-controls" class="control-group shared-controls-controlgroup">
-            <label class="control-label" for="rule-startDate">
-                Start date: </label>
-            <div class="controls ">
-                <input type="date" name="rule-startDate_date" id="rule-startDate_date">
-                <input type="time" name="rule-startDate_time" id="rule-startDate_time">
-                <span class="help-inline"></span>
-            </div>
-        </div>
-
-        <div id="rule-endDate-controls" class="control-group shared-controls-controlgroup">
-            <label class="control-label" for="rule-endDate">
-                End date: </label>
-            <div class="controls ">
-                <input type="date" name="rule-endDate_date" id="rule-endDate_date">
-                <input type="time" name="rule-endDate_time" id="rule-endDate_time">
-                <span class="help-inline"></span>
-            </div>
-        </div>
-
-        <input type="hidden" name="rule-key" id="rule-key"/>
-    </div>
-    <div class="modal-footer">
-        <a href="#" class="btn btn-dialog-cancel label_from_data pull-left" data-dismiss="modal"
-           style="display: inline;">Cancel</a>
-        <div class="loading pull-left"></div>
-        <a href="#" class="btn btn-primary pull-right save save_rule" style="display: inline;">Save</a>
-    </div>
-</div>
-
-
 <div tabindex="-1" class="import-json-modal modal fade in hide">
     <div class="modal-header">
         <button type="button" class="close btn-dialog-close" data-dismiss="modal">x</button>
@@ -145,22 +48,23 @@
     <table id="table"  class="table table-striped display">
         <thead>
         <tr>
-            <th></th>
-            <th>Key</th>
-            <th>Title</th>
-            <th>Description</th>
-            <th>Match Type</th>
-            <th>Rule Type</th>
-            <th>Scope</th>
-            <th>Comment</th>
-            <th>Conditions</th><% if (!insufficient_permissions){ %>
-            <th>Start date</th>
-            <th>End date</th>
-            <th>Creation date</th>
-            <th>Creation User</th>
-            <th>Last modified</th>
-            <th>Modification User</th>
-            <th>Actions</th> <% } %>
+            <th class=all></th>
+            <th class=all>Key</th>
+            <th class=all>Title</th>
+            <th class=all>Description</th>
+            <th class=all>Match Type</th>
+            <th class=all>Rule Type</th>
+            <th class=all>Scope</th>
+            <th class=all>Comment</th>
+            <th class=all>Conditions</th><% if (!insufficient_permissions){ %>
+            <th class=all>Start date</th>
+            <th class=all>End date</th>
+            <th class=all>Creation date</th>
+            <th class=all>Creation User</th>
+            <th class=all>Last modified</th>
+            <th class=all>Modification User</th>
+            <th class=all>Disabled</th>
+            <th class=all>Actions</th> <% } %>
         </tr>
         </thead>
         <tbody>
@@ -189,6 +93,7 @@
             <td><%- rules[c].creationUser %></td>
             <td><%- rules[c].modificationDate %></td>
             <td><%- rules[c].modificationUser %></td>
+            <td><%- rules[c].disabled %></td>
 
             <% if(!insufficient_permissions){ %>
             <td>
@@ -204,9 +109,10 @@
                    data-title="<%- rule.title %>"
                    data-type="<%- rule.type %>" data-scope="<%- rule.scope %>"
                    data-comment="<%- rule.comment %>"
-                   href="#">Edit properties</a>
+                   href="#">Edit Rule</a>
                 | <a class="remove_rule" data-key="<%- rule._key %>" href="#">Remove</a>
                 | <a class="clone_rule" data-key="<%- rule._key %>" href="#">Clone</a>
+                | <a class="rule_log" data-key="<%- rule._key %>" href="/app/event_masker/masker_audit_logs?form.tk_time.earliest=-24h%40h&form.tk_time.latest=now&form.rule=<%- rule._key %>">Logs</a>
                 <% } %>
             </td>
             <% } %>

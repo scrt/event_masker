@@ -1,5 +1,5 @@
-<dashboard script="event_masker_rules_edit.js" isDashboard="false" hideEdit="true">
-    <label>Edit Rule</label>
+<dashboard script="event_masker_form.js" isDashboard="false" hideEdit="true">
+    <label>Event Masker</label>
     <row>
         <panel>
             <title>Usage information</title>
@@ -9,9 +9,7 @@
                     <li>Right click on the table displays a context menu that enables you to add/delete a row or copy/paste data. You can also save as CSV the table and order data by headers.</li>
                     <li>Values can be copied from splunk search result and pasted in the table bellow. This add row automatically.</li>
                     <li>Use "fieldname" (without quotes) to refer to a field from results</li>
-                    <li>By default, values are case in-sensitive</li>
-                    <li>Use matches operator for regex. Ensure that iscasensitive is set to true, otherwise your pattern will be lowercased which may cause the match to fail</li>
-                    <li>When using the matches operator, remember that special characters must be escaped in the pattern</li>
+                    <li>By default, values are case insensitive</li>
                 </ul>
                 <b>Note:</b> All of the conditions must be true for a valid application. Make sure it works by testing your rules (for example : <code>search * | table myfield | mask scope="rule scope"</code>)
             </html>
@@ -19,7 +17,7 @@
     </row>
     <row>
         <html id="element1">
-            <div id="event_masker_rules_editor">
+            <div id="event_masker_form">
                 Loading...
             </div>
         </html>

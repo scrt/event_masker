@@ -1,49 +1,64 @@
 []
-access = read : [ admin ], write : [ admin ]
-owner = nobody
+access = read : [ admin, ess_user, ess_analyst, ess_admin ], write : [ admin, ess_admin ]
 export = system
+owner = nobody
 
 [views]
-access = read : [ admin ], write : [ admin ]
+access = read : [ admin, ess_user, ess_analyst, ess_admin ], write : [ admin, ess_admin ]
 export = none
 owner = nobody
 
 [datamodels]
-access = read : [ admin ], write : [ admin ]
+access = read : [ admin, ess_user, ess_analyst, ess_admin ], write : [ admin, ess_admin ]
 export = system
 owner = nobody
 
 [models]
-access = read : [ admin ], write : [ admin ]
+access = read : [ admin, ess_user, ess_analyst, ess_admin ], write : [ admin, ess_admin ]
 export = system
 owner = nobody
 
 [transforms]
-access = read : [ admin ], write : [ admin ]
+access = read : [ admin, ess_user, ess_analyst, ess_admin ], write : [ admin, ess_admin ]
 export = system
 owner = nobody
 
 [nav]
-access = read : [ admin ], write : [ admin ]
+access = read : [ admin, ess_user, ess_analyst, ess_admin ], write : [ admin, ess_admin ]
 export = none
 owner = nobody
 
 [collections]
-access = read : [ admin ], write : [ admin ]
+access = read : [ admin, ess_user, ess_analyst, ess_admin ], write : [ admin, ess_admin ]
 export = system
 owner = nobody
 
 [savedsearches]
-access = read : [ admin ], write : [ admin ]
+access = read : [ admin, ess_user, ess_analyst, ess_admin ], write : [ admin, ess_admin ]
 export = system
 owner = nobody
 
 [savedsearches/mask_command_logs_audit]
-access = read : [ admin ], write : [ admin ]
+access = read : [ admin, ess_user, ess_analyst, ess_admin ], write : [ admin, ess_admin ]
 export = system
 owner = nobody
 
-[views/event_masker_rules_edit]
-access = read : [ admin ], write : [ admin ]
+[views/masker_rules]
+access = read : [ admin, ess_user, ess_analyst, ess_admin ], write : [ admin, ess_admin ]
 export = none
+owner = nobody
+
+[views/masker_form]
+access = read : [ admin, ess_user, ess_analyst, ess_admin ], write : [ admin, ess_admin ]
+export = none
+owner = nobody
+
+[workflow_actions/Whitelist%20Notable%20in%20Event%20Masker]
+access = read : [ admin, ess_user, ess_analyst, ess_admin ], write : [ admin, ess_admin ]
+export = system
+owner = nobody
+
+[lookups/event_masker_rules_type_lookup.csv]
+access = read : [ admin, ess_user, ess_analyst, ess_admin ], write : [ admin, ess_admin ]
+export = system
 owner = nobody

@@ -38,8 +38,14 @@ def apply_rule(
     elif operator == 'ends with':
         return left_value.endswith(right_value)
     elif operator == "matches":
-        return bool(re.search(right_value, left_value))
+        try:
+            return bool(re.search(right_value, left_value))
+        except: 
+            return None
     elif operator == "does not match":
-        return not bool(re.search(right_value, left_value))
+        try:
+            return not bool(re.search(right_value, left_value))
+        except: 
+            return None
 
     raise AssertionError(f'Comparator "{operator}" was not recognized.')

@@ -1,6 +1,13 @@
 <form>
   <label>Event Masker Logs</label>
-  <description>Helper Dashboard to check Event Masker rules. Logs are also available in index=_internal "masked record:"</description>
+  <description>Helper Dashboard to check Event Masker rules. Logs are also available in index=_internal component="EventMasker"</description>
+  <search id="basesearch">
+    <query>
+index IN (_internal, audit) component="EventMasker" |fields log_level,scope,rule,result,record,event_message,conditions, sourcetype 
+    </query>
+    <earliest>$tk_time.earliest$</earliest>
+    <latest>$tk_time.latest$</latest>
+  </search>
   <fieldset submitButton="false">
     <input type="time" token="tk_time" searchWhenChanged="true">
       <label></label>
@@ -10,21 +17,13 @@
       </default>
     </input>
   </fieldset>
-    <search id="basesearch">
-    <query>
-index IN (_internal, audit) sourcetype="event_masker*" "masked record:"
-| rex "scope=\"(?&lt;scope&gt;.*)\" result=\"(?&lt;result&gt;.*)\""
-    </query>
-    <earliest>$tk_time.earliest$</earliest>
-    <latest>$tk_time.latest$</latest>
-  </search>
   <row>
     <panel>
       <title>Masked Events over time</title>
       <chart>
         <search base="basesearch">
           <query>search
-| dedup _time, scope, result
+| dedup _time, scope, rule, event_message
 | timechart count by scope</query>
         </search>
         <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
@@ -67,10 +66,9 @@ index IN (_internal, audit) sourcetype="event_masker*" "masked record:"
     <panel>
       <title>Scope count</title>
       <table>
-        <search base="basesearch">>
-          <query>search
-| dedup _time, scope, result
-| stats count by scope</query>
+        <search base="basesearch">&gt;<query>search
+| dedup _time, scope, event_message
+| stats sparkline count by scope,rule</query>
         </search>
         <option name="count">15</option>
         <option name="drilldown">none</option>
@@ -78,12 +76,11 @@ index IN (_internal, audit) sourcetype="event_masker*" "masked record:"
       </table>
     </panel>
     <panel>
-      <title>Result count</title>
+      <title>Event message type</title>
       <chart>
         <search base="basesearch">
-          <query>search
-| dedup _time, scope, result
-| stats count by result</query>
+          <query>search log_level=*
+| stats count by event_message</query>
         </search>
         <option name="charting.chart">pie</option>
         <option name="refresh.display">progressbar</option>
@@ -92,28 +89,84 @@ index IN (_internal, audit) sourcetype="event_masker*" "masked record:"
   </row>
   <row>
     <panel>
-      <title>Results without rules applied</title>
+      <title>Search in logs</title>
+      <input type="dropdown" token="scope" searchWhenChanged="true">
+        <label>Scope</label>
+        <choice value="*">All</choice>
+        <fieldForLabel>scope</fieldForLabel>
+        <fieldForValue>scope</fieldForValue>
+        <search>
+          <query>| inputlookup event_masker_rules | fields scope | dedup scope</query>
+        </search>
+      </input>
+      <input type="dropdown" token="rule" searchWhenChanged="true">
+        <label>Rule</label>
+        <choice value="*">All</choice>
+        <fieldForLabel>title</fieldForLabel>
+        <fieldForValue>title</fieldForValue>
+        <search>
+          <query>| inputlookup event_masker_rules | search scope=$scope$ | fields title | dedup title</query>
+        </search>
+        <prefix>"</prefix>
+        <suffix>"</suffix>
+        <default>*</default>
+      </input>
+      <input type="dropdown" token="log_level" searchWhenChanged="true">
+        <label>Log level</label>
+        <choice value="*">All</choice>
+        <choice value="INFO">INFO</choice>
+        <choice value="WARNING">WARNING</choice>
+        <choice value="ERROR">ERROR</choice>
+        <fieldForLabel>log_level</fieldForLabel>
+        <fieldForValue>log_level</fieldForValue>
+        <prefix>"</prefix>
+        <suffix>"</suffix>
+        <default>*</default>
+      </input>
+      <table>
+        <search base="basesearch">&gt;<query>search | search scope="$scope$" rule=$rule$ log_level=$log_level$ sourcetype!="event_masker-rule_logs"
+| eval record=trim(replace(record,"OrderedDict",""))
+| eval details=coalesce(conditions,record)
+| table _time, log_level, scope, rule, event_message, details</query>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Info logs</title>
       <table>
         <search base="basesearch">
-          <query>search
-| dedup _time, scope, result
-| table _time, scope, result
-| where like(result,"%not%")</query>
+          <query>search log_level=INFO sourcetype!="event_masker-rule_logs"
+| eval record=trim(replace(record,"OrderedDict","Record"))
+| eval details=coalesce(conditions,record)
+| table _time, scope, rule, event_message, details</query>
         </search>
-        <option name="count">25</option>
+        <option name="count">10</option>
         <option name="refresh.display">progressbar</option>
       </table>
     </panel>
     <panel>
-      <title>Results with rules applied</title>
+      <title>Warning logs</title>
       <table>
         <search base="basesearch">
-          <query>search
-| dedup _time, scope, result
-| table _time, scope, result
-| where NOT like(result,"%not%")</query>
+          <query>search log_level=WARNING
+| table _time, scope, rule, event_message, conditions</query>
         </search>
-        <option name="count">25</option>
+        <option name="count">10</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+    <panel>
+      <title>Error logs</title>
+      <table>
+        <search base="basesearch">
+          <query>search log_level=ERROR
+| table _time, scope, rule, event_message</query>
+        </search>
+        <option name="count">10</option>
         <option name="refresh.display">progressbar</option>
       </table>
     </panel>

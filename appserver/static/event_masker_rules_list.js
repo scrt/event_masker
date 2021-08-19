@@ -15,7 +15,7 @@ require([
             'el': $("#event_masker_rules"),
             'app': 'event_masker',
             'collection': 'event_masker_rules',
-            'editor': 'masker_rules_edit',
+            'editor': 'masker_form',
             'allow_editing_collection': true
         });
 

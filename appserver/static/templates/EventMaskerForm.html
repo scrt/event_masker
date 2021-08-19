@@ -1,0 +1,89 @@
+<% if( list_link !== null && list_link_title !== null) { %>
+    <a id="list_link" href="<%- list_link %>"><i
+            class="icon-chevron-left icon-no-underline"></i><span><%- list_link_title %></span></a>
+    <% } %>
+    
+    <% if (insufficient_permissions){ %>
+    <div class="no_permissions_dialog" id="no_permissions">
+        <div class="padlock"></div>
+        <div class="dialog_message">You do not have the necessary capability required to whitelist rules. Please
+            contact your Splunk administrator.
+        </div>
+    </div>
+    <% } else { %>
+    
+    
+    <div id="item-data-table" class="widget">
+        <div>
+            <div class="widgeterror"></div>
+        </div>
+    </div>
+
+    <div class="table-loading-message" id="loading">Loading conditions...</div>
+    
+    <div id="tableEditor">
+        
+        <div id="mainControls" class="actionButtons">
+            <input type="hidden" id="returnto" name="returnto" value=""></input>
+            <a href="#" id="cancel" class="btn label_from_data" style="float: right; margin: 5px;">Cancel</a>
+            <a href="#" id="save" class="btn btn-primary" style="float: right; margin: 5px;">Save</a>
+        </div>
+
+        <div id="form">
+            <input type="hidden" id="rule-key" name="rule-key" value="">
+            <main id="boxes">
+                <div id="column" class="divspec">
+                    Title: <br>
+                    <input type="text" name="rule-title" id="rule-title" style="width:100%"/>
+                </div>
+                <div id="column" class="divspec">
+                    Match type: <br>
+                    <select id="rule-match-type">
+                        <option value="all">All (AND)</option>
+                        <option value="any">Any (OR)</option>
+                    </select>
+                </div>
+                <div id="column" class="divspec">
+                    Rule type: <br>
+                    <select id="rule-type">
+                        <option selected value="base">PLEASE SELECT</option>>
+                    </select>
+                </div>
+            </main>
+
+            <main id="boxes">
+                <div id="column" class="divspec">
+                    Description:<br>
+                    <textarea name="rule-description" id="rule-description" style="width: 100%" rows="5" cols="80" ></textarea>
+                </div>
+                <div id="column" class="divspec">
+                    Scope: <br>
+                    <textarea name="rule-scope" id="rule-scope" style="width: 100%" rows="5" cols="80" ></textarea>
+                </div>
+                <div id="column" class="divspec">
+                    Comment: <br>
+                    <textarea name="rule-comment" id="rule-comment" style="width: 100%" rows="5" cols="80" ></textarea>
+                </div>
+            </main>
+
+            <main id="boxes" style="padding-top: 100px;">
+                <div id="column" class="divspec">
+                    Start date: <br>
+                    <input type="date" name="rule-startDate_date" id="rule-startDate_date">
+                    <input type="time" name="rule-startDate_time" id="rule-startDate_time">
+                </div>
+                <div id="column" class="divspec">
+                    End date: <br>
+                    <input type="date" name="rule-endDate_date" id="rule-endDate_date">
+                    <input type="time" name="rule-endDate_time" id="rule-endDate_time">
+                </div>
+                <div id="column" class="divspec">
+                </div>
+            </main>
+        </div>
+    
+        <div id="dataTable" style="padding-top: 20px; width: 100%"></div>
+    
+    </div>
+    <% } %>
+    

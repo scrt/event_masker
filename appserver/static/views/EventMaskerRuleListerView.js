@@ -2,11 +2,14 @@ require.config({
     paths: {
         "datatables": "../app/event_masker/contrib/DataTables/js/jquery.dataTables",
         "select": "../app/event_masker/contrib/Select/js/dataTables.select.min",
+        "buttons": "../app/event_masker/contrib/Buttons/js/dataTables.buttons.min",
+        "buttons-colvis": "../app/event_masker/contrib/Buttons/js/dataTables.buttons.colVis.min",
         text: "../app/event_masker/contrib/text",
     },
     map: {
         '*': {
           'datatables.net': 'datatables',
+          'datatables.net-buttons': 'datatables',
         }
     },
 });
@@ -20,7 +23,10 @@ define(['underscore',
         "datatables",
         "css!../app/event_masker/contrib/DataTables/css/jquery.dataTables.css",
         "select",
+        "buttons",
+        "buttons-colvis",
         "css!../app/event_masker/contrib/Select/css/select.dataTables.min.css",
+        "css!../app/event_masker/contrib/Buttons/css/buttons.dataTables.min.css",
         "css!../app/event_masker/EventMaskerRuleList.css",
     ],
     function (_, mvc, $, SimpleSplunkView, EventMaskerRulesListTemplate, dataTables, datetime) {
@@ -91,8 +97,8 @@ define(['underscore',
 
             editRule: function (event) {
                 var key = $(event.target).data('key');
-
-                this.showEditRuleModal(key);
+                window.location.href = '/app/event_masker/masker_form?key='+key;
+                //this.showEditRuleModal(key);
             },
 
             /**
@@ -343,11 +349,7 @@ define(['underscore',
             addRule: function (event) {
 
                 // Clear the form
-                this.clearForm();
-
-                // Show the modal
-                //$('.new-entry', this.$el).show();
-                $('.rule-edit-modal', this.$el).modal();
+                window.location.href = '/app/event_masker/masker_form';
             },
             
             exportJson: function (event) {
@@ -730,7 +732,7 @@ define(['underscore',
 
                 $('#table-container', this.$el).html(_.template(lookup_list_template, {
                     rules: rules,
-                    editor: this.editor,
+                    editor: Splunk.util.make_url("/app/event_masker/masker_form"),
                     list_link: this.list_link,
                     list_link_title: this.list_link_title,
                     insufficient_permissions: insufficient_permissions,
@@ -753,7 +755,8 @@ define(['underscore',
                     null,                   // creationUser
                     null,                   // modificationUser
                     null,                   // Conditions
-                    {"bSortable": false}  // Actions
+                    null,                   // Disabled
+                    {"bSortable": false, "searchable": false}  // Actions
                 ];
 
                 if (insufficient_permissions) {
@@ -773,16 +776,24 @@ define(['underscore',
                         null,                   // creationUser
                         null,                   // modificationUser
                         null,                   // Conditions
+                        null,                   // Disabled
                     ];
                 }
 
                     var table = $('#table').DataTable({
-                        dom: '<fr<t>lip>',
+                        dom: '<frB<t>lip>',
                         iDisplayLength: 25,
                         bStateSave: true,
                         aoColumns: columnMetaData,
                         sScrollX: "100%",
                         sScrollXInner: "100%",
+                        buttons: [
+                            {
+                                extend: 'colvis',
+                                collectionLayout: 'fixed two-column',
+                                columns: ':gt(0)'
+                            }
+                        ],
                         columnDefs: [ {
                             orderable: false,
                             className: 'select-checkbox',
@@ -792,10 +803,14 @@ define(['underscore',
                                 targets: 1,
                                 visible: false,
                                 searchable: false
+                            },
+                            {
+                                searchable: false, 
+                                targets: 0 
                             }
                         ],
                         select: {
-                            style:    'os',
+                            style:    'multi',
                             selector: 'td:first-child'
                         },
                         order: [[ 2, 'asc' ]]

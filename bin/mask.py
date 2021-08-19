@@ -6,6 +6,7 @@ import os
 import sys
 from typing import Dict, Iterable
 
+
 import splunk.appserver.mrsparkle.lib.util as util
 
 dir = os.path.join(util.get_apps_dir(), 'event_masker')
@@ -29,7 +30,7 @@ def setup_logging(logging_level: int):
 
     logging_file_name = "event_masker.log"
     base_log_path = os.path.join('var', 'log', 'splunk')
-    logging_format = "%(asctime)s %(levelname)-s\t%(module)s:%(lineno)d - %(message)s"
+    logging_format = "%(asctime)s %(levelname)s %(message)s"
     splunk_log_handler = logging.handlers.RotatingFileHandler(
         os.path.join(splunk_home, base_log_path, logging_file_name),
         mode='a'
@@ -42,45 +43,6 @@ def setup_logging(logging_level: int):
     logging_stanza_name = 'python'
     splunk.setupSplunkLogger(logger, logging_default_config_file, logging_local_config_file, logging_stanza_name)
     return logger
-
-
-# Check the validity period
-def is_valid(rule):
-    is_valid = False
-
-    # Get current time
-    current_time = int(datetime.datetime.now().timestamp())
-
-    # Extract start and end valid period
-    start_period = rule[0]["startDate"]
-    if not start_period:
-        start_period = current_time  # If the start date is not set
-    else:
-        try:
-            start_period = int(datetime.datetime.strptime(start_period, "%Y-%m-%dT%H:%M").timestamp())
-        except ValueError:
-            logger.warning(f'masked record: scope="{rule[0]["scope"]}" result="startDate {start_period} not match format %Y-%m-%dT%H:%M"')
-            return is_valid
-
-    end_period = rule[0]["endDate"]
-    if not end_period:
-        end_period = current_time + 631065600  # If the end date is not set (default 20 years)
-    else:
-        try:
-            end_period = int(datetime.datetime.strptime(end_period, "%Y-%m-%dT%H:%M").timestamp())
-        except ValueError:
-            logger.warning(f'masked record: scope="{rule[0]["scope"]}" result="endDate {end_period} not match format %Y-%m-%dT%H:%M"')
-            return is_valid
-            
-
-    # Check that the current time is between start and end valid period
-    if (current_time >= start_period) and (current_time <= end_period):
-        is_valid = True
-
-    logger.debug(
-        f'Date timestamps; current time: {current_time}, start validity period: {start_period}, end validity period: {end_period}')
-
-    return is_valid
 
 
 @Configuration()
@@ -104,9 +66,9 @@ class MaskCommand(StreamingCommand):
 
     scope = Option(
         doc='''
-        **Syntax:** **scope**=***<scope>*
-        **Description:** Scope of the rule to be applied*
-        **Example:**
+        Syntax: scope=<scope>
+        Description: Scope of the rule to be applied
+        Example:
         index=winevents EventCode=4624
         | mask scope="logins_system"
         ''',
@@ -115,15 +77,26 @@ class MaskCommand(StreamingCommand):
 
     log = Option(
         doc='''
-        **Syntax:** **log**=***t*
-        **Description:** Logs in the internal logs*
-        **Example:**
+        Syntax: log=<t_or_f>
+        Description: Logs in the internal logs
+        Example:
         index=winevents EventCode=4624
-        | mask log=t scope="logins_system"
+        | mask scope="logins_system" log=t
         ''',
         require=False,
         default=True,
         validate=validators.Boolean()
+    )
+
+    timefield = Option(
+        doc='''
+        Syntax: timefield=<timefield_name>
+        Description: Select the time field with the format : %Y-%m-%d %H:%M:%S.%f
+        Example:
+        index=winevents EventCode=4624
+        | mask scope="logins_system" log=t fieldname="timestamp"
+        ''',
+        require=False
     )
 
     def stream(
@@ -133,9 +106,7 @@ class MaskCommand(StreamingCommand):
         
         scope = self.scope
         log = self.log
-        
-        logger.debug(f'In MaskCommand: scope={self.scope} log={self.log}')
-
+        timefield = self.timefield
         kvstore = self.service.kvstore
         rules_kv = kvstore['event_masker_rules']
         rules = rules_kv.data.query()
@@ -144,46 +115,41 @@ class MaskCommand(StreamingCommand):
 
         if rules_raw_disabled:
             for rule in rules_raw_disabled:
-                logger.warning(f'masked record: scope="{scope}" result="rule \"{rule}\" not enable"')
+                logger.warning(f'log_level="WARNING" component=EventMasker - scope="{scope}" rule="{rule}" event_message="rule not enable"')
 
         if (not rules_raw) & (len(rules_raw_disabled) != 0):
-            logger.warning(f'masked record: scope="{scope}" result="scope match but rule is not enable"')
+            logger.warning(f'log_level="WARNING" component=EventMasker - scope="{scope}" event_message="scope match but rule is not enable"')
        
         if (not rules_raw) & (not rules_raw_disabled):
-            logger.warning(f'masked record: scope="{scope}" result="scope not match"')
+            logger.error(f'log_level="ERROR" component=EventMasker - scope="{scope}" event_message="scope not match"')
 
         if rules_raw:
- 
-            rules = [MaskRule.from_dict(r) for r in rules_raw]
+            conditions = [MaskRule.from_dict(c) for c in rules_raw]
 
-            if not is_valid(rules_raw):
-                logger.warning(f'masked record: scope="{scope}" result="validity period not match"')
-                
-                for record in records:
-                    yield record
-            else :
-
-                match = False
-
-                for record in records:
-
-                    should_mask_record = should_mask(record, rules)
-
-                    if not should_mask_record:
-                        yield record
-                    elif log:
-                        logger.info(f'masked record: scope="{scope}" result="values match"')
+            match = False     
+            
+            for record in records:
+                try:
+                    should_mask_record, rule, event_message, error_messages = should_mask(record, conditions, timefield)
+                    if error_messages:
+                        if log:
+                            for error in error_messages:
+                                logger.warning(f'log_level="WARNING" component=EventMasker - scope="{scope}" rule="{error[0]}" event_message="{error[1]}" record="{conditions}"')
+                    if should_mask_record:
                         match = True
+                        if log:
+                            logger.info(f'log_level="INFO" component=EventMasker - scope="{scope}" rule="{rule}" event_message="{event_message}" record="{record}"')                          
                     else:
-                        match = True
-                    
-                if not match:
-                    logger.warning(f'masked record: scope="{scope}" result="values not match"')
+                        match = False
+                        yield record
+                except BaseException as err:
+                    logger.error(f'log_level="ERROR" component="EventMasker" - scope="{scope}" event_message="{err}"')
+                    yield record 
+            
         else:
             for record in records:
                 yield record
         
-
 if __name__ == '__main__':
-    logger = setup_logging(logging.INFO)
+    logger = setup_logging(logging.DEBUG)
     dispatch(MaskCommand, sys.argv, sys.stdin, sys.stdout, __name__)

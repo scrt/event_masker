@@ -1,0 +1,6 @@
+value,rule_type
+backup,Backup
+false-positive,False-positive
+maintenance,Maintenance
+normal,Normal behaviour
+security-test,Security test

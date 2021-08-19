@@ -1,6 +1,6 @@
 require.config({
     paths: {
-        EventMaskerRuleEditorView: "../app/event_masker/views/EventMaskerRuleEditorView"
+        EventMaskerFormView: "../app/event_masker/views/EventMaskerFormView"
     }
 });
 
@@ -8,11 +8,11 @@ require([
         "jquery",
         "underscore",
         "backbone",
-        "EventMaskerRuleEditorView",
+        "EventMaskerFormView",
         "splunkjs/mvc/simplexml/ready!"
-    ], function ($, _, Backbone, EventMaskerRuleEditorView) {
-        var EventMaskerRuleEditorView = new EventMaskerRuleEditorView({
-            'el': $("#event_masker_rules_editor"),
+    ], function ($, _, Backbone, EventMaskerFormView) {
+        var EventMaskerFormView = new EventMaskerFormView({
+            'el': $("#event_masker_form"),
             'app': 'event_masker',
             'collection': 'event_masker_rules',
             'lister': 'masker_rules',
@@ -20,6 +20,6 @@ require([
             'list_link': 'masker_rules'
         });
 
-        EventMaskerRuleEditorView.render();
+        EventMaskerFormView.render();
     }
 );

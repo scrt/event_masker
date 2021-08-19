@@ -94,18 +94,20 @@ table.dataTable thead .sorting_desc_disabled:after {
   right: 8px;
   display: block;
   font-family: "Glyphicons Halflings";
-  opacity: 0.0;
+  opacity: 0.5;
 }
 table.dataTable thead .sorting:after {
-  opacity: 0.0;
+  opacity: 0.2;
   content: "";
   /* sort */
 }
 table.dataTable thead .sorting_asc:after {
+  opacity: 0.5;
   content: "";
   /* sort-by-attributes */
 }
 table.dataTable thead .sorting_desc:after {
+  opacity: 0.5;
   content: "";
   /* sort-by-attributes-alt */
 }

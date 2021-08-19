@@ -2,5 +2,6 @@
   <view name="masker_rules" default="true"/>
   <view name="masker_overview"/>
   <view name="masker_logs"/>
+  <view name="masker_audit_logs"/>
   <view name="search" />
 </nav>

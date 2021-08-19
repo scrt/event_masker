@@ -1,0 +1,48 @@
+<form>
+  <label>Event Masker Audit Logs</label>
+  <description>Helper Dashboard to check Event Masker rules modification by user. Logs are also available in index=_internal</description>
+  <fieldset submitButton="false"></fieldset>
+  <row>
+    <panel>
+      <title>Search in logs</title>
+      <input type="time" token="tk_time" searchWhenChanged="true">
+        <label></label>
+        <default>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </default>
+      </input>
+      <input type="dropdown" token="rule" searchWhenChanged="true">
+        <label>Rule</label>
+        <choice value="*">All</choice>
+        <fieldForLabel>title</fieldForLabel>
+        <fieldForValue>key</fieldForValue>
+        <search>
+          <query>| inputlookup event_masker_rules| eval key=_key 
+|  fields key,title</query>
+        </search>
+        <prefix>"</prefix>
+        <suffix>"</suffix>
+      </input>
+      <table>
+        <search>
+          <query>index=_internal sourcetype="event_masker-rule_logs"FO
+| search key=$rule$
+| rex mode=sed "s/%[890ABCDEDFabcdef][\d\w]/-/g"
+|  foreach * 
+    [| eval &lt;&lt;FIELD&gt;&gt;=urldecode(&lt;&lt;FIELD&gt;&gt;)]
+|  foreach columns,values 
+    [| eval &lt;&lt;FIELD&gt;&gt;=split(&lt;&lt;FIELD&gt;&gt;,"¬")]
+| table time, log_level, user, type, key, message, columns, values</query>
+          <earliest>$tk_time.earliest$</earliest>
+          <latest>$tk_time.latest$</latest>
+        </search>
+        <option name="drilldown">cell</option>
+        <drilldown>
+          <set token="key">$click.value2$</set>
+          <link target="_blank">/app/event_masker/masker_form?key=$key$</link>
+        </drilldown>
+      </table>
+    </panel>
+  </row>
+</form>

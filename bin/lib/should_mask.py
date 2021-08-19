@@ -3,6 +3,8 @@ from typing import Dict, List
 from bin.lib.compare_value import apply_rule
 from bin.lib.mask_rule import MaskRule
 
+import datetime
+
 '''
 Function used to check if a record should be masked based on whitelisting rules.
 '''
@@ -34,35 +36,47 @@ def _should_inner(
                 if type(record[condition.field]) is list :
                     rule_applied_result = False
                     for mv_value in record[condition.field] :
-                        rule_applied_result =  rule_applied_result or apply_rule(
+                        result = apply_rule(
                             left_value= mv_value.casefold(),
                             operator=condition.operator,
                             right_value=right_value.casefold()
                         )
+                        if(result is None):
+                            return None
+                        rule_applied_result =  rule_applied_result or result
                 else:
-                    rule_applied_result = apply_rule(
+                    result = apply_rule(
                         left_value=left_value.casefold(),
                         operator=operator,
                         right_value=right_value.casefold()
                     )
+                    if(result is None):
+                        return None
+                    rule_applied_result = result
                 
             else:
                 # Handle multi value fields
                 if type(record[condition.field]) is list :
                     rule_applied_result = False
                     for mv_value in record[condition.field] :
-                        rule_applied_result =  rule_applied_result or apply_rule(
-                            left_value= mv_value,
+                        result = apply_rule(
+                            left_value=record[condition.field],
                             operator=condition.operator,
                             right_value=condition.value
                         )
+                        if(result is None):
+                            return None
+                        rule_applied_result =  rule_applied_result or result
  
                 else:
-                    rule_applied_result = apply_rule(
+                    result = apply_rule(
                         left_value=record[condition.field],
                         operator=condition.operator,
                         right_value=condition.value
                     )
+                    if(result is None):
+                        return None
+                    rule_applied_result = result
             
             should_result.append(rule_applied_result)
 
@@ -79,15 +93,78 @@ This function call _should_inner on each record and rule to check if they match.
 
 def should_mask(
         record: Dict,
-        rules: List[MaskRule]
+        rules: List[MaskRule],
+        timefield: str
 ) -> bool:
-    """
-    >>> should_mask({}, []) # Should not mask record if there is no rule
-    False
-    """
 
-    for rule in rules:
-        if _should_inner(record, rule):
-            return True
+  
+    error_messages = []
 
-    return False
+    for rule in list(rules):
+     
+        if not rule.startDate and not rule.endDate:
+            result = _should_inner(record, rule)
+            if result:
+                event_message = "conditions match"
+                return True, rule.title, event_message, error_messages
+            elif result is None:
+                event_message = "regex malformed"
+                error_messages.append([rule.title, event_message])
+                rules.remove(rule)
+            else:
+                event_message = "conditions not match"
+        else:
+            if not timefield:
+                event_message = "timefield should be defined"
+                error_messages.append([rule.title, event_message])
+                rules.remove(rule)
+            elif timefield not in record:
+                event_message = "timefield not in records"
+                error_messages.append([rule.title, event_message])
+                rules.remove(rule)
+            else :
+                try:
+                    event_time = int(datetime.datetime.strptime(str(record[timefield]), '%Y-%m-%d %H:%M:%S.%f').timestamp())
+                except Exception:
+                    event_message = "timefield not match format or not in records"
+                    error_messages.append([rule.title, event_message])
+                    rules.remove(rule)
+
+                if not rule.startDate:
+                    start_period = 0  # If the start date is not set
+                else:   
+                    try:
+                        start_period = int(datetime.datetime.strptime(rule.startDate, "%Y-%m-%dT%H:%M").timestamp())
+                    except Exception:
+                        event_message = "startDate not respect format"
+                        error_messages.append([rule.title, event_message])
+                        rules.remove(rule)
+
+                if not rule.endDate:
+                    current_time = int(datetime.datetime.now().timestamp())
+                    end_period = current_time + 631065600 
+                else:
+                    try:
+                        end_period = int(datetime.datetime.strptime(rule.endDate, "%Y-%m-%dT%H:%M").timestamp())
+                    except Exception:
+                        event_message = "endDate not respect format"
+                        error_messages.append([rule.title, event_message])
+                        rules.remove(rule)
+                        
+                if (event_time >= start_period) and (event_time <= end_period):
+                    result = _should_inner(record, rule)
+                    if result:
+                        event_message = "validity period match"
+                        return True, rule.title, event_message, error_messages
+                    elif result is None:
+                        event_message = "regex malformed"
+                        error_messages.append([rule.title, event_message])
+                        rules.remove(rule)
+                    else:
+                        event_message = "Validity period not match"
+                        error_messages.append([rule.title, event_message])
+                else:
+                    event_message = "Validity period is outside of records timerange"
+                    error_messages.append([rule.title, event_message])
+
+    return False, rule.title, event_message, error_messages

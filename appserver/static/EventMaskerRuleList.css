@@ -75,3 +75,7 @@ table.dataTable > tbody > tr > td, table.dataTable > thead > tr > th {
 table.dataTable.no-footer {
   border-bottom: 0px solid #111;
 }
+
+.dataTables_wrapper .dt-buttons {
+  float:right;
+}

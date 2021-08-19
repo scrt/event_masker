@@ -18,7 +18,8 @@
           "field": "condition1",
           "operator": "is",
           "value": "value1",
-          "iscasesensitive": true
+          "iscasesensitive": true,
+          "comment" : "my comment for condition 1"
         }
       ]
     },
@@ -41,13 +42,16 @@
           "field": "condition2",
           "operator": "ends with",
           "value": "value2",
-          "iscasesensitive": false
+          "iscasesensitive": false,
+          "comment" : "my comment for condition 2"
+          
         },
         {
-          "field": "condition2",
+          "field": "condition3",
           "operator": "starts with",
-          "value": "value2",
-          "iscasesensitive": false
+          "value": "value3",
+          "iscasesensitive": false,
+          "comment" : "my comment for condition 3"
         }
       ]
     }

@@ -6,6 +6,7 @@
 | inputlookup event_masker_rules
     </query>
   </search>
+  <fieldset submitButton="false"></fieldset>
   <row>
     <panel>
       <title>Total rules</title>
@@ -51,18 +52,17 @@
     <panel>
       <title>Events Masked count</title>
       <input type="time" token="tk_time" searchWhenChanged="true">
-      <label></label>
-      <default>
-        <earliest>-24h@h</earliest>
-        <latest>now</latest>
-      </default>
-    </input>
+        <label></label>
+        <default>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </default>
+      </input>
       <single>
         <search>
-          <query>index IN (_internal, audit) sourcetype="event_masker*" "masked record:"
-| rex "scope=\"(?&lt;scope&gt;[^\s]+)\" result=\"(?&lt;result&gt;.*)\""
+          <query>index IN (_internal, audit) component="EventMasker"
 | dedup _time, scope, result
-| where like (result,"values match")
+| where like (result,"conditions match")
 | stats count</query>
           <earliest>$tk_time.earliest$</earliest>
           <latest>$tk_time.latest$</latest>
@@ -81,27 +81,25 @@
   </row>
   <row>
     <panel>
-      <title>Rule validity period remaining time &lt; X days</title>
-      <input type="text" token="tk_days" searchWhenChanged="true">
-        <label>Days</label>
-        <default>15</default>
+      <title>Rule conditions list by scope</title>
+      <input type="dropdown" token="scope" searchWhenChanged="true">
+        <label>Scope</label>
+        <choice value="*">All</choice>
+        <fieldForLabel>scope</fieldForLabel>
+        <fieldForValue>scope</fieldForValue>
+        <search>
+          <query>| inputlookup event_masker_rules | fields scope | dedup scope</query>
+        </search>
       </input>
       <table>
-        <search base="basesearch">
-          <query>search
-| fields title, endDate
-| eval now=now()
-| eval end=strptime(endDate,"%Y-%m-%dT%H:%M")
-| eval TimeDiff=end-now
-| eval remaining_time_day=floor(TimeDiff/86400)
-| where remaining_time_day &lt; $tk_days$
-| table title, remaining_time_day
-| rename title as Rule, remaining_time_day as "Remaining time in day"</query>
+        <search>
+          <query>| inputlookup event_masker_rules | search scope="$scope$"
+| eval key=_key
+| table title, key, startdate, enddate, conditions.field, conditions.operator,conditions.value,conditions.iscasesensitive,conditions.comment</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
         </search>
-        <option name="dataOverlayMode">none</option>
         <option name="drilldown">none</option>
-        <option name="rowNumbers">false</option>
-        <option name="wrap">true</option>
       </table>
     </panel>
   </row>

@@ -5,7 +5,7 @@
     "id": {
       "group": null,
       "name": "event_masker",
-      "version": "2021.04.01"
+      "version": "21.8.1"
     },
     "author": [
       {
@@ -19,7 +19,7 @@
     "classification": {
       "intendedAudience": null,
       "categories": ["IT Operations", "Utility"],
-      "developmentStatus": "Beta"
+      "developmentStatus": "Stable"
     },
     "commonInformationModels": null,
     "license": {
