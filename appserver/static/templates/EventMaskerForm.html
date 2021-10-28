@@ -23,64 +23,73 @@
     
     <div id="tableEditor">
         
-        <div id="mainControls" class="actionButtons">
+        <div id="mainControls" class="row justify-end">
             <input type="hidden" id="returnto" name="returnto" value=""></input>
-            <a href="#" id="cancel" class="btn label_from_data" style="float: right; margin: 5px;">Cancel</a>
-            <a href="#" id="save" class="btn btn-primary" style="float: right; margin: 5px;">Save</a>
+            <a href="#" id="save" class="btn btn-primary">Save</a>
+            <a href="#" id="cancel" class="btn label_from_data">Cancel</a>
         </div>
 
-        <div id="form">
+        <form>
             <input type="hidden" id="rule-key" name="rule-key" value="">
-            <main id="boxes">
-                <div id="column" class="divspec">
+            
+            <div class="row">
+                <div class="col col-33">
                     Title: <br>
-                    <input type="text" name="rule-title" id="rule-title" style="width:100%"/>
+                    <input type="text" name="rule-title" id="rule-title" />
                 </div>
-                <div id="column" class="divspec">
+                <div class="col col-33">
                     Match type: <br>
                     <select id="rule-match-type">
                         <option value="all">All (AND)</option>
                         <option value="any">Any (OR)</option>
                     </select>
                 </div>
-                <div id="column" class="divspec">
+                <div class="col col-33">
                     Rule type: <br>
                     <select id="rule-type">
                         <option selected value="base">PLEASE SELECT</option>>
                     </select>
                 </div>
-            </main>
+            </div>
 
-            <main id="boxes">
-                <div id="column" class="divspec">
-                    Description:<br>
-                    <textarea name="rule-description" id="rule-description" style="width: 100%" rows="5" cols="80" ></textarea>
+            
+            <div class="row">
+                <div class="col col-33">
+                
+                    <label for="desc">Description:</label>
+                    <textarea class="full-width" name="rule-description" id="rule-description" cols="80" rows="5"></textarea>
                 </div>
-                <div id="column" class="divspec">
-                    Scope: <br>
-                    <textarea name="rule-scope" id="rule-scope" style="width: 100%" rows="5" cols="80" ></textarea>
+                
+                <div class="col col-33">
+                
+                    <label for="description2">Scope:</label>
+                     <textarea class="full-width" name="rule-scope" id="rule-scope" cols="80" rows="5"></textarea>
                 </div>
-                <div id="column" class="divspec">
-                    Comment: <br>
-                    <textarea name="rule-comment" id="rule-comment" style="width: 100%" rows="5" cols="80" ></textarea>
-                </div>
-            </main>
+                
+                <div class="col col-33">
+                
+                    <label for="desc">Comment:</label>
+                    <textarea class="full-width" name="rule-comment" id="rule-comment" cols="80" rows="5"></textarea>
+                </div>    
+                    
+            </div>
+            
 
-            <main id="boxes" style="padding-top: 100px;">
-                <div id="column" class="divspec">
+            <div class=row >
+                <div class="col col-33">
                     Start date: <br>
-                    <input type="date" name="rule-startDate_date" id="rule-startDate_date">
-                    <input type="time" name="rule-startDate_time" id="rule-startDate_time">
+                    <input type="date" name="rule-startDate_date" id="rule-startDate_date" style="width:40%">
+                    <input type="time" name="rule-startDate_time" id="rule-startDate_time" style="width:auto">
                 </div>
-                <div id="column" class="divspec">
+                <div class="col col-33">
                     End date: <br>
-                    <input type="date" name="rule-endDate_date" id="rule-endDate_date">
-                    <input type="time" name="rule-endDate_time" id="rule-endDate_time">
+                    <input type="date" name="rule-endDate_date" id="rule-endDate_date" style="width:40%">
+                    <input type="time" name="rule-endDate_time" id="rule-endDate_time" style="width:auto">
                 </div>
-                <div id="column" class="divspec">
+                <div class="col col-33">
                 </div>
-            </main>
-        </div>
+            </div>
+        </form>
     
         <div id="dataTable" style="padding-top: 20px; width: 100%"></div>
     

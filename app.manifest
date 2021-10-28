@@ -5,7 +5,7 @@
     "id": {
       "group": null,
       "name": "event_masker",
-      "version": "21.8.1"
+      "version": "21.10.1"
     },
     "author": [
       {
@@ -46,6 +46,6 @@
   "tasks": null,
   "inputGroups": null,
   "incompatibleApps": null,
-  "supportedDeployments": [ "_standalone" ],
+  "supportedDeployments": [ "_standalone", "_search_head_clustering" ],
   "targetWorkloads": ["_search_heads"]
 }

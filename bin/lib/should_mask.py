@@ -52,22 +52,20 @@ def _should_inner(
                     )
                     if(result is None):
                         return None
-                    rule_applied_result = result
-                
+                    rule_applied_result = result 
             else:
                 # Handle multi value fields
                 if type(record[condition.field]) is list :
                     rule_applied_result = False
                     for mv_value in record[condition.field] :
                         result = apply_rule(
-                            left_value=record[condition.field],
+                            left_value=mv_value,
                             operator=condition.operator,
                             right_value=condition.value
                         )
                         if(result is None):
                             return None
                         rule_applied_result =  rule_applied_result or result
- 
                 else:
                     result = apply_rule(
                         left_value=record[condition.field],
@@ -99,72 +97,75 @@ def should_mask(
 
   
     error_messages = []
+    title = ""
+    event_message = ""
 
     for rule in list(rules):
-     
-        if not rule.startDate and not rule.endDate:
-            result = _should_inner(record, rule)
-            if result:
-                event_message = "conditions match"
-                return True, rule.title, event_message, error_messages
-            elif result is None:
-                event_message = "regex malformed"
-                error_messages.append([rule.title, event_message])
-                rules.remove(rule)
-            else:
-                event_message = "conditions not match"
-        else:
-            if not timefield:
-                event_message = "timefield should be defined"
-                error_messages.append([rule.title, event_message])
-                rules.remove(rule)
-            elif timefield not in record:
-                event_message = "timefield not in records"
-                error_messages.append([rule.title, event_message])
-                rules.remove(rule)
-            else :
-                try:
-                    event_time = int(datetime.datetime.strptime(str(record[timefield]), '%Y-%m-%d %H:%M:%S.%f').timestamp())
-                except Exception:
-                    event_message = "timefield not match format or not in records"
-                    error_messages.append([rule.title, event_message])
+        if rule:
+            if not rule.startDate and not rule.endDate:
+                result = _should_inner(record, rule)
+                if result:
+                    event_message = "conditions match"
+                    return True, rule.title, event_message, error_messages
+                elif result is None:
+                    event_message = "regex malformed"
+                    error_messages.append([rule.title, event_message, rule.conditions])
                     rules.remove(rule)
-
-                if not rule.startDate:
-                    start_period = 0  # If the start date is not set
-                else:   
-                    try:
-                        start_period = int(datetime.datetime.strptime(rule.startDate, "%Y-%m-%dT%H:%M").timestamp())
-                    except Exception:
-                        event_message = "startDate not respect format"
-                        error_messages.append([rule.title, event_message])
-                        rules.remove(rule)
-
-                if not rule.endDate:
-                    current_time = int(datetime.datetime.now().timestamp())
-                    end_period = current_time + 631065600 
                 else:
+                    title = rule.title
+                    event_message = "conditions not match"
+            else:
+                if not timefield:
+                    event_message = "timefield should be defined"
+                    error_messages.append([rule.title, event_message, rule.conditions])
+                    rules.remove(rule)
+                elif timefield not in record:
+                    event_message = "timefield not in records"
+                    error_messages.append([rule.title, event_message, rule.conditions])
+                    rules.remove(rule)
+                else :
                     try:
-                        end_period = int(datetime.datetime.strptime(rule.endDate, "%Y-%m-%dT%H:%M").timestamp())
+                        event_time = int(datetime.datetime.strptime(str(record[timefield]), '%Y-%m-%d %H:%M:%S.%f').timestamp())
                     except Exception:
-                        event_message = "endDate not respect format"
-                        error_messages.append([rule.title, event_message])
+                        event_message = "timefield not match format or not in records"
+                        error_messages.append([rule.title, event_message, rule.conditions])
                         rules.remove(rule)
-                        
-                if (event_time >= start_period) and (event_time <= end_period):
-                    result = _should_inner(record, rule)
-                    if result:
-                        event_message = "validity period match"
-                        return True, rule.title, event_message, error_messages
-                    elif result is None:
-                        event_message = "regex malformed"
-                        error_messages.append([rule.title, event_message])
-                        rules.remove(rule)
+
+                    if not rule.startDate:
+                        start_period = 0  # If the start date is not set
+                    else:   
+                        try:
+                            start_period = int(datetime.datetime.strptime(rule.startDate, "%Y-%m-%dT%H:%M").timestamp())
+                        except Exception:
+                            event_message = "startDate not respect format"
+                            error_messages.append([rule.title, event_message, rule.startDate])
+                            rules.remove(rule)
+
+                    if not rule.endDate:
+                        current_time = int(datetime.datetime.now().timestamp())
+                        end_period = current_time + 631065600 
                     else:
-                        event_message = "Validity period not match"
-                        error_messages.append([rule.title, event_message])
-                else:
-                    event_message = "Validity period is outside of records timerange"
-                    error_messages.append([rule.title, event_message])
-
-    return False, rule.title, event_message, error_messages
+                        try:
+                            end_period = int(datetime.datetime.strptime(rule.endDate, "%Y-%m-%dT%H:%M").timestamp())
+                        except Exception:
+                            event_message = "endDate not respect format"
+                            error_messages.append([rule.title, event_message, rule.endDate])
+                            rules.remove(rule)
+                            
+                    if (event_time >= start_period) and (event_time <= end_period):
+                        result = _should_inner(record, rule)
+                        if result:
+                            event_message = "validity period match"
+                            return True, rule.title, event_message, error_messages
+                        elif result is None:
+                            event_message = "regex malformed"
+                            error_messages.append([rule.title, event_message, rule.conditions])
+                            rules.remove(rule)
+                        else:
+                            title = rule.title
+                            event_message = "Validity period not match"
+                    else:
+                        title = rule.title
+                        event_message = "Validity period is outside of records timerange"
+    
+    return False, title, event_message, error_messages

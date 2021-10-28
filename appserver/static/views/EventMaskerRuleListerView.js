@@ -32,7 +32,7 @@ define(['underscore',
     function (_, mvc, $, SimpleSplunkView, EventMaskerRulesListTemplate, dataTables, datetime) {
         
         // Get current user
-        var currentUser=Splunk.util.getConfigValue("USERNAME");
+        var currentUser=Splunk.util.getConfigValue("USERNAME");      
         
         // Define the custom view class
         var EventMaskerListerView = SimpleSplunkView.extend({
@@ -807,6 +807,10 @@ define(['underscore',
                             {
                                 searchable: false, 
                                 targets: 0 
+                            },
+                            {
+                                type: 'natural-ci',
+                                targets: '_all' 
                             }
                         ],
                         select: {

@@ -17,7 +17,7 @@
 
 var jSuites = function(options) {
     var obj = {}
-    var version = '4.7.3';
+    var version = '4.9.11';
 
     var find = function(DOMElement, component) {
         if (DOMElement[component.type] && DOMElement[component.type] == component) {
@@ -109,6 +109,23 @@ var jSuites = function(options) {
     // Update dictionary
     obj.setDictionary = function(d) {
         obj.dictionary = d;
+
+        // Translations
+        var t = null;
+        for (var i = 0; i < jSuites.calendar.weekdays.length; i++) {
+            t =  jSuites.translate(jSuites.calendar.weekdays[i]);
+            if (jSuites.calendar.weekdays[i]) {
+                jSuites.calendar.weekdays[i] = t;
+                jSuites.calendar.weekdaysShort[i] = t.substr(0,3);
+            }
+        }
+        for (var i = 0; i < jSuites.calendar.months.length; i++) {
+            t = jSuites.translate(jSuites.calendar.months[i]);
+            if (t) {
+                jSuites.calendar.months[i] = t;
+                jSuites.calendar.monthsShort[i] = t.substr(0,3);
+            }
+        }
     }
 
     // Dictionary
@@ -369,6 +386,17 @@ jSuites.ajax.oncomplete = {};
 jSuites.ajax.requests = [];
 jSuites.ajax.queue = [];
 
+jSuites.alert = function(message) {
+    if (jSuites.getWindowWidth() < 800 && jSuites.dialog) {
+        jSuites.dialog.open({
+            title:'Alert',
+            message:message,
+        });
+    } else {
+        alert(message);
+    }
+}
+
 jSuites.animation = {};
 
 jSuites.animation.slideLeft = function(element, direction, done) {
@@ -511,10 +539,10 @@ jSuites.calendar = (function(el, options) {
             // Placeholder
             placeholder: '',
             // Translations can be done here
-            months: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-            monthsFull: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
-            weekdays: ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],
-            weekdays_short: ['S', 'M', 'T', 'W', 'T', 'F', 'S'],
+            months: jSuites.calendar.monthsShort,
+            monthsFull: jSuites.calendar.months,
+            weekdays: jSuites.calendar.weekdays,
+            weekdays_short: jSuites.calendar.weekdays,
             textDone: jSuites.translate('Done'),
             textReset: jSuites.translate('Reset'),
             textUpdate: jSuites.translate('Update'),
@@ -532,17 +560,12 @@ jSuites.calendar = (function(el, options) {
             // Internal mode controller
             mode: null,
             position: null,
-        };
+            // Data type
+            dataType: null,
+        }
 
-        // Translations
-        for (var i = 0; i < defaults.months.length; i++) {
-            defaults.months[i] = jSuites.translate(defaults.months[i]);
-        }
-        for (var i = 0; i < defaults.monthsFull.length; i++) {
-            defaults.monthsFull[i] = jSuites.translate(defaults.monthsFull[i]);
-        }
-        for (var i = 0; i < defaults.weekdays.length; i++) {
-            defaults.weekdays[i] = jSuites.translate(defaults.weekdays[i]);
+        for (var i = 0; i < defaults.weekdays_short.length; i++) {
+            defaults.weekdays_short[i] = defaults.weekdays_short[i].substr(0,1);
         }
 
         // Loop through our object
@@ -575,6 +598,12 @@ jSuites.calendar = (function(el, options) {
             el.setAttribute('placeholder', obj.options.placeholder);
         } else {
             el.removeAttribute('placeholder');
+        }
+
+        if (jSuites.isNumeric(obj.options.value) && obj.options.value > 0) {
+            obj.options.value = jSuites.calendar.numToDate(obj.options.value);
+            // Data type numberic
+            obj.options.dataType = 'numeric';
         }
 
         // Texts
@@ -1203,9 +1232,7 @@ jSuites.calendar = (function(el, options) {
         if (e.target.value && e.target.value.length > 3) {
             var test = jSuites.calendar.extractDateFromString(e.target.value, obj.options.format);
             if (test) {
-                if (e.target.getAttribute('data-completed') == 'true') {
-                    obj.setValue(test);
-                }
+                obj.setValue(test);
             }
         }
     }
@@ -1548,15 +1575,24 @@ jSuites.calendar.prettifyAll = function() {
 }
 
 jSuites.calendar.now = function(date, dateOnly) {
-    if (! date) {
-        var date = new Date();
+    if (Array.isArray(date)) {
+        var y = date[0];
+        var m = date[1];
+        var d = date[2];
+        var h = date[3];
+        var i = date[4];
+        var s = date[5];
+    } else {
+        if (! date) {
+            var date = new Date();
+        }
+        var y = date.getFullYear();
+        var m = date.getMonth() + 1;
+        var d = date.getDate();
+        var h = date.getHours();
+        var i = date.getMinutes();
+        var s = date.getSeconds();
     }
-    var y = date.getFullYear();
-    var m = date.getMonth() + 1;
-    var d = date.getDate();
-    var h = date.getHours();
-    var i = date.getMinutes();
-    var s = date.getSeconds();
 
     if (dateOnly == true) {
         return jSuites.two(y) + '-' + jSuites.two(m) + '-' + jSuites.two(d);
@@ -1612,9 +1648,13 @@ jSuites.calendar.extractDateFromString = function(date, format) {
 
     // Get day
     var d = v2.search("DD");
-    d = v1.substr(d,2);
-    if (parseInt(d) != d  || d > 31) {
-        test = 0;
+    if (d >= 0) {
+        d = v1.substr(d,2);
+        if (parseInt(d) != d  || d > 31) {
+            test = 0;
+        }
+    } else {
+        d = '01';
     }
 
     // Get hour
@@ -1685,6 +1725,33 @@ jSuites.calendar.getDateString = function(value, options) {
         var options = {};
     }
 
+    // Labels
+    if (options && typeof(options) == 'object') {
+        var format = options.format;
+    } else {
+        var format = options;
+    }
+
+    if (! format) {
+        format = 'YYYY-MM-DD';
+    }
+
+    // Convert to number of hours
+    if (typeof(value) == 'number' && format.indexOf('[h]') >= 0) {
+        var result = parseFloat(24 * Number(value));
+        if (format.indexOf('mm') >= 0) {
+            var h = (''+result).split('.');
+            if (h[1]) {
+                var d = 60 * parseFloat('0.' + h[1])
+                d = parseFloat(d.toFixed(2));
+            } else {
+                var d = 0;
+            }
+            result = parseInt(h[0]) + ':' + jSuites.two(d);
+        }
+        return result;
+    }
+
     // Date instance
     if (value instanceof Date) {
         value = jSuites.calendar.now(value);
@@ -1692,171 +1759,151 @@ jSuites.calendar.getDateString = function(value, options) {
         value = jSuites.calendar.numToDate(value);
     }
 
-    // Labels
-    if (options && typeof(options) == 'object') {
-        var format = options.format;
-    } else {
-        var format = options || 'YYYY-MM-DD';
+    // Tokens
+    var tokens = [ 'DAY', 'WD', 'DDDD', 'DDD', 'DD', 'D', 'Q', 'HH24', 'HH12', 'HH', 'H', 'AM/PM', 'MI', 'SS', 'MS', 'YYYY', 'YYY', 'YY', 'Y', 'MONTH', 'MON', 'MMMMM', 'MMMM', 'MMM', 'MM', 'M', '.' ];
+
+    // Expression to extract all tokens from the string
+    var e = new RegExp(tokens.join('|'), 'gi');
+    // Extract
+    var t = format.match(e);
+
+    // Compatibility with excel
+    for (var i = 0; i < t.length; i++) {
+        if (t[i].toUpperCase() == 'MM') {
+            // Not a month, correct to minutes
+            if (t[i-1] && t[i-1].toUpperCase().indexOf('H') >= 0) {
+                t[i] = 'mi';
+            } else if (t[i-2] && t[i-2].toUpperCase().indexOf('H') >= 0) {
+                t[i] = 'mi';
+            } else if (t[i+1] && t[i+1].toUpperCase().indexOf('S') >= 0) {
+                t[i] = 'mi';
+            } else if (t[i+2] && t[i+2].toUpperCase().indexOf('S') >= 0) {
+                t[i] = 'mi';
+            }
+        }
     }
 
-    // Labels
-    if (options && options.weekdays) {
-        var weekdays = options.weekdays;
-    } else {
-        var weekdays = [ 'Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday' ];
+    // Object
+    var o = {
+        tokens: t
     }
 
-    // Labels
-    if (options && options.months) {
-        var months = options.months;
-    } else {
-        var months = [ 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec' ];
-    }
-
-    // Labels
-    if (options && options.months) {
-        var monthsFull = options.monthsFull;
-    } else {
-        var monthsFull = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-    }
-
-    // Default date format
-    if (! format) {
-        format = 'DD/MM/YYYY';
-    } else {
-        format = format.replace(/h{1,2}:m{1,2} AM\/PM/g, 'HH12:MI');
-        format = format.replace(/h{1,2}:m{1,2}/g, 'HH24:MI');
-    }
-
+    // Value
     if (value) {
         var d = ''+value;
         var splitStr = (d.indexOf('T') !== -1) ? 'T' : ' ';
         d = d.split(splitStr);
-
-        var h = '';
-        var m = '';
-        var s = '';
+ 
+        var h = 0;
+        var m = 0;
+        var s = 0;
 
         if (d[1]) {
             h = d[1].split(':');
-            m = h[1] ? h[1] : '00';
-            s = h[2] ? h[2] : '00';
-            h = h[0] ? h[0] : '00';
-        } else {
-            h = '00';
-            m = '00';
-            s = '00';
+            m = h[1] ? h[1] : 0;
+            s = h[2] ? h[2] : 0;
+            h = h[0] ? h[0] : 0;
         }
 
         d = d[0].split('-');
 
         if (d[0] && d[1] && d[2] && d[0] > 0 && d[1] > 0 && d[1] < 13 && d[2] > 0 && d[2] < 32) {
-            var calendar = new Date(d[0], d[1]-1, d[2]);
 
-            d[1] = (d[1].length < 2 ? '0' : '') + d[1];
-            d[2] = (d[2].length < 2 ? '0' : '') + d[2];
-            h = (h.length < 2 ? '0' : '') + h;
-            m = (m.length < 2 ? '0' : '') + m;
-            s = (s.length < 2 ? '0' : '') + s;
+            // Data
+            o.data = [ d[0], d[1], d[2], h, m, s ];
 
-            // New value
-            value = format;
+            // Value
+            o.value = [];
 
-            // Extract tokens
-            var tokens = [ 'YYYY', 'YYY', 'YY', 'MMMMM', 'MMMM', 'MMM', 'MM', 'DDDDD', 'DDDD', 'DDD', 'DD', 'DY', 'DAY', 'WD', 'D', 'Q', 'HH24', 'HH12', 'HH', 'PM', 'AM', 'MI', 'SS', 'MS', 'MONTH', 'MON', 'Y', 'M'];
-            var pieces = [];
-            var tmp = value;
+            // Calendar instance
+            var calendar = new Date(o.data[0], o.data[1]-1, o.data[2], o.data[3], o.data[4], o.data[5]);
 
-            while (tmp) {
-                var t = 0;
-                for (var i = 0; i < tokens.length; i++) {
-                    if (t == 0 && tmp.toUpperCase().indexOf(tokens[i]) === 0) {
-                        t = tokens[i].length;
+            // Get method
+            var get = function(i) {
+                // Token
+                var t = this.tokens[i];
+                // Case token
+                var s = t.toUpperCase();
+                var v = null;
+
+                if (s === 'YYYY') {
+                    v = this.data[0];
+                } else if (s === 'YYY') {
+                    v = this.data[0].substring(1,4);
+                } else if (s === 'YY') {
+                    v = this.data[0].substring(2,4);
+                } else if (s === 'Y') {
+                    v = this.data[0].substring(3,4);
+                } else if (t === 'MON') {
+                    v = jSuites.calendar.months[calendar.getMonth()].substr(0,3).toUpperCase();
+                } else if (t === 'mon') {
+                    v = jSuites.calendar.months[calendar.getMonth()].substr(0,3).toLowerCase();
+                } else if (t === 'MONTH') {
+                    v = jSuites.calendar.months[calendar.getMonth()].toUpperCase();
+                } else if (t === 'month') {
+                    v = jSuites.calendar.months[calendar.getMonth()].toLowerCase();
+                } else if (s === 'MMMMM') {
+                    v = jSuites.calendar.months[calendar.getMonth()].substr(0, 1);
+                } else if (s === 'MMMM' || t === 'Month') {
+                    v = jSuites.calendar.months[calendar.getMonth()];
+                } else if (s === 'MMM' || t == 'Mon') {
+                    v = jSuites.calendar.months[calendar.getMonth()].substr(0,3);
+                } else if (s === 'MM') {
+                    v = jSuites.two(this.data[1]);
+                } else if (s === 'M') {
+                    v = calendar.getMonth()+1;
+                } else if (t === 'DAY') {
+                    v = jSuites.calendar.weekdays[calendar.getDay()].toUpperCase();
+                } else if (t === 'day') {
+                    v = jSuites.calendar.weekdays[calendar.getDay()].toLowerCase();
+                } else if (s === 'DDDD' || t == 'Day') {
+                    v = jSuites.calendar.weekdays[calendar.getDay()];
+                } else if (s === 'DDD') {
+                    v = jSuites.calendar.weekdays[calendar.getDay()].substr(0,3);
+                } else if (s === 'DD') {
+                    v = jSuites.two(this.data[2]);
+                } else if (s === 'D') {
+                    v = this.data[2];
+                } else if (s === 'Q') {
+                    v = Math.floor((calendar.getMonth() + 3) / 3);
+                } else if (s === 'HH24' || s === 'HH') {
+                    v = jSuites.two(this.data[3]);
+                } else if (s === 'HH12') {
+                    if (this.data[3] > 12) {
+                        v = jSuites.two(this.data[3] - 12);
+                    } else {
+                        v = jSuites.two(this.data[3]);
                     }
+                } else if (s === 'H') {
+                    v = this.data[3];
+                } else if (s === 'MI') {
+                    v = jSuites.two(this.data[4]);
+                } else if (s === 'SS') {
+                    v = jSuites.two(this.data[5]);
+                } else if (s === 'MS') {
+                    v = calendar.getMilliseconds();
+                } else if (s === 'AM/PM') {
+                    if (this.data[3] >= 12) {
+                        v = 'PM';
+                    } else {
+                        v = 'AM';
+                    }
+                } else if (s === 'WD') {
+                    v = jSuites.calendar.weekdays[calendar.getDay()];
                 }
-                if (t == 0) {
-                    pieces.push(tmp.substr(0, 1));
-                    tmp = tmp.substr(1);
+
+                if (v === null) {
+                    this.value[i] = this.tokens[i];
                 } else {
-                    pieces.push(tmp.substr(0, t));
-                    tmp = tmp.substr(t);
+                    this.value[i] = v;
                 }
             }
 
-            // Replace tokens per values
-            var replace = function(k, v, c) {
-                if (c == true) {
-                    for (var i = 0; i < pieces.length; i++) {
-                        if (('' + pieces[i]).toUpperCase() == k) {
-                            pieces[i] = v;
-                        }
-                    }
-                } else {
-                    for (var i = 0; i < pieces.length; i++) {
-                        if (pieces[i] == k) {
-                            pieces[i] = v;
-                        }
-                    }
-                }
+            for (var i = 0; i < o.tokens.length; i++) {
+                get.call(o, i);
             }
-
-            replace('YYYY', d[0], true);
-            replace('YYY', d[0].substring(1,4), true);
-            replace('YY', d[0].substring(2,4), true);
-
-            replace('dddd', weekdays[calendar.getDay()]);
-            replace('ddd', weekdays[calendar.getDay()].substr(0,3));
-            replace('DD', d[2], true);
-            replace('Q', Math.floor((calendar.getMonth() + 3) / 3), true);
-
-            if (h) {
-                replace('HH24', h);
-            }
-
-            if (h > 12) {
-                replace('HH12', h - 12, true);
-                replace('HH', h - 12, true);
-                replace('AM', 'pm', true);
-                replace('PM', 'pm', true);
-            } else {
-                replace('HH12', h, true);
-                replace('HH', h, true);
-                replace('AM', 'am', true);
-                replace('PM', 'am', true);
-            }
-
-            replace('MI', m, true);
-            replace('SS', s, true);
-            replace('MS', calendar.getMilliseconds(), true);
-
-            // Textual tokens
-            replace('MONTH', monthsFull[calendar.getMonth()].toUpperCase());
-            replace('Month', monthsFull[calendar.getMonth()]);
-            replace('month', monthsFull[calendar.getMonth()].toLowerCase());
-            replace('MON', months[calendar.getMonth()].toUpperCase());
-            replace('mmmmm', monthsFull[calendar.getMonth()].substr(0, 1));
-            replace('mmmm', months[calendar.getMonth()]);
-            replace('mmm', monthsFull[calendar.getMonth()]);
-            replace('MMM', months[calendar.getMonth()].toUpperCase());
-            replace('MM', d[1], true);
-            replace('Mon', months[calendar.getMonth()]);
-            replace('mon', months[calendar.getMonth()].toLowerCase());
-            replace('m', d[1]);
-
-            replace('DAY', weekdays[calendar.getDay()].toUpperCase());
-            replace('Day', weekdays[calendar.getDay()]);
-            replace('day', weekdays[calendar.getDay()].toLowerCase());
-            replace('DY', weekdays[calendar.getDay()].substr(0,3).toUpperCase());
-            replace('Dy', weekdays[calendar.getDay()].substr(0,3));
-            replace('dy', weekdays[calendar.getDay()].substr(0,3).toLowerCase());
-            replace('D', weekdays[calendar.getDay()]);
-            replace('WD', weekdays[calendar.getDay()]);
-            replace('d', d[2]);
-
-            replace('Y', d[0].substring(3,4), true);
-
             // Put pieces together
-            value = pieces.join('');
+            value = o.value.join('');
         } else {
             value = '';
         }
@@ -1865,6 +1912,11 @@ jSuites.calendar.getDateString = function(value, options) {
     return value;
 }
 
+// Jsuites calendar labels
+jSuites.calendar.weekdays = [ 'Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday' ];
+jSuites.calendar.months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+jSuites.calendar.weekdaysShort = [ 'Sun','Mon','Tue','Wed','Thu','Fri','Sat' ];
+jSuites.calendar.monthsShort = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 
 jSuites.color = (function(el, options) {
@@ -3117,7 +3169,6 @@ jSuites.dropdown = (function(el, options) {
         // Search options
         obj.search = '';
         obj.results = null;
-        obj.numOfItems = 0;
 
         // Create dropdown
         el.classList.add('jdropdown');
@@ -3129,6 +3180,7 @@ jSuites.dropdown = (function(el, options) {
         // Header
         obj.header = document.createElement('input');
         obj.header.className = 'jdropdown-header';
+        obj.header.type = 'text';
         obj.header.setAttribute('autocomplete', 'off');
         obj.header.onfocus = function() {
             if (typeof(obj.options.onfocus) == 'function') {
@@ -3220,6 +3272,10 @@ jSuites.dropdown = (function(el, options) {
             });
         }
 
+        content.onwheel = function(e) {
+            e.stopPropagation();
+        }
+
         // Change method
         el.change = obj.setValue;
 
@@ -3286,18 +3342,21 @@ jSuites.dropdown = (function(el, options) {
     /**
      * Add a new item
      * @param {string} title - title of the new item
+     * @param {string} id - value/id of the new item
      */
-    obj.add = function(title) {
+    obj.add = function(title, id) {
         if (! title) {
             var current = obj.options.autocomplete == true ? obj.header.value : '';
-            var title = prompt('Text', current);
+            var title = prompt(jSuites.translate('Add A New Option'), current);
             if (! title) {
                 return false;
             }
         }
 
         // Id
-        var id = jSuites.guid()
+        if (! id) {
+           id = jSuites.guid();
+        }
 
         // Create new item
         if (! obj.options.format) {
@@ -3309,12 +3368,17 @@ jSuites.dropdown = (function(el, options) {
             var item = {
                 id: id,
                 name: title,
-            };
+            }
         }
 
         // Callback
         if (typeof(obj.options.onbeforeinsert) == 'function') {
-            obj.options.onbeforeinsert(obj, item);
+            var ret = obj.options.onbeforeinsert(obj, item);
+            if (ret === false) {
+                return false;
+            } else if (ret) {
+                item = ret;
+            }
         }
 
         // Add item to the main list
@@ -3334,6 +3398,11 @@ jSuites.dropdown = (function(el, options) {
         // Show content
         if (content.style.display == 'none') {
             content.style.display = '';
+        }
+
+        // Search?
+        if (obj.results) {
+            obj.results.push(newItem);
         }
 
         return item;
@@ -3386,6 +3455,11 @@ jSuites.dropdown = (function(el, options) {
             item.element.setAttribute('data-disabled', true);
         }
 
+        // Tooltip
+        if (data.tooltip) {
+            item.element.setAttribute('title', data.tooltip);
+        }
+
         // Image
         if (data.image) {
             var image = document.createElement('img');
@@ -3395,6 +3469,17 @@ jSuites.dropdown = (function(el, options) {
                image.classList.add('jdropdown-image-small');
             }
             item.element.appendChild(image);
+        } else if (data.icon) {
+            var icon = document.createElement('span');
+            icon.className = "jdropdown-icon material-icons";
+            icon.innerText = data.icon;
+            if (! data.title) {
+               icon.classList.add('jdropdown-icon-small');
+            }
+            if (data.color) {
+                icon.style.color = data.color;
+            }
+            item.element.appendChild(icon);
         } else if (data.color) {
             var color = document.createElement('div');
             color.className = 'jdropdown-color';
@@ -3446,9 +3531,6 @@ jSuites.dropdown = (function(el, options) {
     obj.appendData = function(data) {
         // Create elements
         if (data.length) {
-            // Reset counter
-            obj.numOfItems = 0;
-
             // Helpers
             var items = [];
             var groups = [];
@@ -3465,6 +3547,9 @@ jSuites.dropdown = (function(el, options) {
                     items.push(i);
                 }
             }
+
+            // Number of items counter
+            var counter = 0;
 
             // Groups
             var groupNames = Object.keys(groups);
@@ -3489,9 +3574,9 @@ jSuites.dropdown = (function(el, options) {
                     for (var j = 0; j < groups[groupNames[i]].length; j++) {
                         var item = obj.createItem(data[groups[groupNames[i]][j]], group, groupNames[i]);
 
-                        if (obj.options.lazyLoading == false || obj.numOfItems < 200) {
+                        if (obj.options.lazyLoading == false || counter < 200) {
                             groupContent.appendChild(item.element);
-                            obj.numOfItems++;
+                            counter++;
                         }
                     }
                     // Group itens
@@ -3510,9 +3595,9 @@ jSuites.dropdown = (function(el, options) {
             if (items.length) {
                 for (var i = 0; i < items.length; i++) {
                     var item = obj.createItem(data[items[i]]);
-                    if (obj.options.lazyLoading == false || obj.numOfItems < 200) {
+                    if (obj.options.lazyLoading == false || counter < 200) {
                         content.appendChild(item.element);
-                        obj.numOfItems++;
+                        counter++;
                     }
                 }
             }
@@ -3573,7 +3658,7 @@ jSuites.dropdown = (function(el, options) {
                 return i;
             }
         }
-        return 0;
+        return false;
     }
 
     /**
@@ -3730,21 +3815,34 @@ jSuites.dropdown = (function(el, options) {
         // Search term
         obj.search = str;
 
-        // Results
-        obj.numOfItems = 0;
+        // Reset index
+        obj.setCursor();
+
+        // Remove nodes from all groups
+        if (obj.groups.length) {
+            for (var i = 0; i < obj.groups.length; i++) {
+                obj.groups[i].lastChild.innerHTML = '';
+            }
+        }
+
+        // Remove all nodes
+        content.innerHTML = '';
 
         // Remove current items in the remote search
         if (obj.options.remoteSearch == true) {
-            obj.currentIndex = null;
+            // Reset results
             obj.results = null;
+            // URL
+            var url = obj.options.url + (obj.options.url.indexOf('?') > 0 ? '&' : '?') + 'q=' + str;
+            // Remote search
             jSuites.ajax({
-                url: obj.options.url + '?q=' + str,
+                url: url,
                 method: 'GET',
                 dataType: 'json',
                 success: function(result) {
                     // Reset items
                     obj.items = [];
-                    content.innerHTML = '';
+
                     // Add the current selected items to the results in case they are not there
                     var current = Object.keys(obj.value);
                     if (current.length) {
@@ -3773,7 +3871,7 @@ jSuites.dropdown = (function(el, options) {
             str = new RegExp(str, 'gi');
 
             // Reset search
-            obj.results = [];
+            var results = [];
 
             // Append options
             for (var i = 0; i < obj.items.length; i++) {
@@ -3790,52 +3888,45 @@ jSuites.dropdown = (function(el, options) {
                 }
 
                 if (str == null || obj.items[i].selected == true || label.match(str) || title.match(str) || groupName.match(str) || synonym.match(str)) {
-                    obj.results.push(obj.items[i]);
-
-                    if (obj.items[i].group && obj.items[i].group.children[1].children[0]) {
-                        // Remove all nodes
-                        while (obj.items[i].group.children[1].children[0]) {
-                            obj.items[i].group.children[1].removeChild(obj.items[i].group.children[1].children[0]);
-                        }
-                    }
+                    results.push(obj.items[i]);
                 }
             }
 
-            // Remove all nodes
-            while (content.children[0]) {
-                content.removeChild(content.children[0]);
-            }
-
-            // Show 200 items at once
-            var number = obj.results.length || 0;
-
-            // Lazyloading
-            if (obj.options.lazyLoading == true && number > 200) {
-                number = 200;
-            }
-
-            for (var i = 0; i < number; i++) {
-                if (obj.results[i].group) {
-                    if (! obj.results[i].group.parentNode) {
-                        content.appendChild(obj.results[i].group);
-                    }
-                    obj.results[i].group.children[1].appendChild(obj.results[i].element);
-                } else {
-                    content.appendChild(obj.results[i].element);
-                }
-                obj.numOfItems++;
-            }
-
-            if (! obj.results.length) {
+            if (! results.length) {
                 content.style.display = 'none';
+
+                // Results
+                obj.results = null;
             } else {
                 content.style.display = '';
+
+                // Results
+                obj.results = results;
+
+                // Show 200 items at once
+                var number = results.length || 0;
+
+                // Lazyloading
+                if (obj.options.lazyLoading == true && number > 200) {
+                    number = 200;
+                }
+
+                for (var i = 0; i < number; i++) {
+                    if (obj.results[i].group) {
+                        if (! obj.results[i].group.parentNode) {
+                            content.appendChild(obj.results[i].group);
+                        }
+                        obj.results[i].group.lastChild.appendChild(obj.results[i].element);
+                    } else {
+                        content.appendChild(obj.results[i].element);
+                    }
+                }
             }
         }
 
         // Auto focus
         if (obj.options.autofocus == true) {
-            obj.firstVisible();
+            obj.first();
         }
     }
 
@@ -3865,10 +3956,10 @@ jSuites.dropdown = (function(el, options) {
             }
 
             // Set cursor for the first or first selected element
-            var k = Object.keys(getValue());
+            var k = getValue();
             if (k[0]) {
                 var cursor = obj.getPosition(k[0]);
-                if (cursor) {
+                if (cursor !== false) {
                     obj.setCursor(cursor);
                 }
             }
@@ -3958,16 +4049,19 @@ jSuites.dropdown = (function(el, options) {
         if (index == undefined) {
             obj.currentIndex = null;
         } else {
-            parseInt(index);
+            index = parseInt(index);
 
-            obj.items[index].element.classList.add('jdropdown-cursor');
-            obj.currentIndex = index;
+            // Cursor only for visible items
+            if (obj.items[index].element.parentNode) {
+                obj.items[index].element.classList.add('jdropdown-cursor');
+                obj.currentIndex = index;
 
-            // Update scroll to the cursor element
-            if (setPosition !== false && obj.items[obj.currentIndex].element) {
-                var container = content.scrollTop;
-                var element = obj.items[obj.currentIndex].element;
-                content.scrollTop = element.offsetTop - element.scrollTop + element.clientTop - 95;
+                // Update scroll to the cursor element
+                if (setPosition !== false && obj.items[obj.currentIndex].element) {
+                    var container = content.scrollTop;
+                    var element = obj.items[obj.currentIndex].element;
+                    content.scrollTop = element.offsetTop - element.scrollTop + element.clientTop - 95;
+                }
             }
         }
     }
@@ -3988,112 +4082,247 @@ jSuites.dropdown = (function(el, options) {
     }
 
     /**
-     * First visible item
+     * First available item
      */
-    obj.firstVisible = function() {
-        var newIndex = null;
-        for (var i = 0; i < obj.items.length; i++) {
-            if (obj.items && obj.items[i] && obj.items[i].element.parentNode && obj.items[i].element.style.display != 'none') {
-                newIndex = i;
-                break;
-            }
+    obj.first = function() {
+        if (obj.options.lazyLoading === true) {
+            obj.loadFirst();
         }
 
-        if (newIndex == null) {
-            return false;
+        var items = content.querySelectorAll('.jdropdown-item');
+        if (items.length) {
+            var newIndex = items[0].indexValue;
+            obj.setCursor(newIndex);
         }
-
-        obj.setCursor(newIndex);
     }
 
     /**
-     * Navigation
+     * Last available item 
      */
-    obj.first = function() {
-        var newIndex = null;
-        for (var i = obj.currentIndex - 1; i >= 0; i--) {
-            if (obj.items && obj.items[i] && obj.items[i].element.parentNode && obj.items[i].element.style.display != 'none') {
-                newIndex = i;
-            }
-        }
-
-        if (newIndex == null) {
-            return false;
-        }
-
-        obj.setCursor(newIndex);
-    }
-
     obj.last = function() {
-        var newIndex = null;
-        for (var i = obj.currentIndex + 1; i < obj.items.length; i++) {
-            if (obj.items && obj.items[i] && obj.items[i].element.parentNode && obj.items[i].element.style.display != 'none') {
-                newIndex = i;
-            }
+        if (obj.options.lazyLoading === true) {
+            obj.loadLast();
         }
 
-        if (newIndex == null) {
-            return false;
+        var items = content.querySelectorAll('.jdropdown-item');
+        if (items.length) {
+            var newIndex = items[items.length-1].indexValue;
+            obj.setCursor(newIndex);
         }
-
-        obj.setCursor(newIndex);
-    }
-
-    var next = function(index, letter) {
-        for (var i = index; i < obj.items.length; i++) {
-            if (obj.items && obj.items[i] && obj.items[i].element.parentNode && (! letter || (''+Text(i)).substr(0,1).toLowerCase() == letter)) {
-                return i;
-            }
-        }
-
-        return null;
     }
 
     obj.next = function(letter) {
-        if (letter && letter.length == 1) {
-            letter = letter.toLowerCase();
-        }
+        var newIndex = null;
 
-        if (obj.currentIndex === null) {
-            var index = obj.currentIndex = 0;
+        if (letter) {
+            if (letter.length == 1) {
+                // Current index
+                var current = obj.currentIndex || -1;
+                // Letter
+                letter = letter.toLowerCase();
+
+                var e = null;
+                var l = null;
+                var items = content.querySelectorAll('.jdropdown-item');
+                if (items.length) {
+                    for (var i = 0; i < items.length; i++) {
+                        if (items[i].indexValue > current) {
+                            if (e = obj.items[items[i].indexValue]) {
+                                if (l = e.element.innerText[0]) {
+                                    l = l.toLowerCase();
+                                    if (letter == l) {
+                                        newIndex = items[i].indexValue;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    obj.setCursor(newIndex);
+                }
+            }
         } else {
-            var index = obj.currentIndex + 1;
-        }
+            if (obj.currentIndex == undefined || obj.currentIndex == null) {
+                obj.first();
+            } else {
+                var element = obj.items[obj.currentIndex].element;
 
-        // Try to find the next from the current position
-        var newIndex = next(index, letter);
+                var next = element.nextElementSibling;
+                if (next) {
+                    if (next.classList.contains('jdropdown-group')) {
+                        next = next.lastChild.firstChild;
+                    }
+                    newIndex = next.indexValue;
+                } else {
+                    if (element.parentNode.classList.contains('jdropdown-group-items')) {
+                        if (next = element.parentNode.parentNode.nextElementSibling) {
+                            if (next.classList.contains('jdropdown-group')) {
+                                next = next.lastChild.firstChild;
+                            } else if (next.classList.contains('jdropdown-item')) {
+                                newIndex = next.indexValue;
+                            } else {
+                                next = null;
+                            }
+                        }
 
-        if (newIndex == null && letter) {
-            // Trying to find from the begining
-            newIndex = next(0, letter);
-            // Did not find
-            if (newIndex == null) {
-                return false;
+                        if (next) {
+                            newIndex = next.indexValue;
+                        }
+                    }
+                }
+
+                if (newIndex !== null) {
+                    obj.setCursor(newIndex);
+                }
             }
         }
-
-        // Set cursor
-        obj.setCursor(newIndex);
     }
 
     obj.prev = function() {
         var newIndex = null;
-        for (var i = obj.currentIndex - 1; i >= 0; i--) {
-            if (obj.items && obj.items[i] && obj.items[i].element.parentNode) {
-                newIndex = i;
-                break;
+
+        if (obj.currentIndex === null) {
+            obj.first();
+        } else {
+            var element = obj.items[obj.currentIndex].element;
+
+            var prev = element.previousElementSibling;
+            if (prev) {
+                if (prev.classList.contains('jdropdown-group')) {
+                    prev = prev.lastChild.lastChild;
+                }
+                newIndex = prev.indexValue;
+            } else {
+                if (element.parentNode.classList.contains('jdropdown-group-items')) {
+                    if (prev = element.parentNode.parentNode.previousElementSibling) {
+                        if (prev.classList.contains('jdropdown-group')) {
+                            prev = prev.lastChild.lastChild;
+                        } else if (prev.classList.contains('jdropdown-item')) {
+                            newIndex = prev.indexValue;
+                        } else {
+                            prev = null
+                        }
+                    }
+
+                    if (prev) {
+                        newIndex = prev.indexValue;
+                    }
+                }
             }
         }
 
-        if (newIndex == null) {
-            return false;
+        if (newIndex !== null) {
+            obj.setCursor(newIndex);
+        }
+    }
+
+    obj.loadFirst = function() {
+        // Search
+        if (obj.results) {
+            var results = obj.results;
+        } else {
+            var results = obj.items;
         }
 
-        obj.setCursor(newIndex);
+        // Show 200 items at once
+        var number = results.length || 0;
+
+        // Lazyloading
+        if (obj.options.lazyLoading == true && number > 200) {
+            number = 200;
+        }
+
+        // Reset container
+        content.innerHTML = '';
+
+        // First 200 items
+        for (var i = 0; i < number; i++) {
+            if (results[i].group) {
+                if (! results[i].group.parentNode) {
+                    content.appendChild(results[i].group);
+                }
+                results[i].group.lastChild.appendChild(results[i].element);
+            } else {
+                content.appendChild(results[i].element);
+            }
+        }
+
+        // Scroll go to the begin
+        content.scrollTop = 0;
+    }
+
+    obj.loadLast = function() {
+        // Search
+        if (obj.results) {
+            var results = obj.results;
+        } else {
+            var results = obj.items;
+        }
+
+        // Show first page
+        var number = results.length;
+
+        // Max 200 items
+        if (number > 200) {
+            number = number - 200;
+
+            // Reset container
+            content.innerHTML = '';
+
+            // First 200 items
+            for (var i = number; i < results.length; i++) {
+                if (results[i].group) {
+                    if (! results[i].group.parentNode) {
+                        content.appendChild(results[i].group);
+                    }
+                    results[i].group.lastChild.appendChild(results[i].element);
+                } else {
+                    content.appendChild(results[i].element);
+                }
+            }
+
+            // Scroll go to the begin
+            content.scrollTop = content.scrollHeight;
+        }
     }
 
     obj.loadUp = function() {
-        return false;
+        var test = false;
+
+        // Search
+        if (obj.results) {
+            var results = obj.results;
+        } else {
+            var results = obj.items;
+        }
+
+        var items = content.querySelectorAll('.jdropdown-item');
+        var fistItem = items[0].indexValue;
+        fistItem = obj.items[fistItem];
+        var index = results.indexOf(fistItem) - 1;
+
+        if (index > 0) {
+            var number = 0;
+
+            while (index > 0 && results[index] && number < 200) {
+                if (results[index].group) {
+                    if (! results[index].group.parentNode) {
+                        content.insertBefore(results[index].group, content.firstChild);
+                    }
+                    results[index].group.lastChild.insertBefore(results[index].element, results[index].group.lastChild.firstChild);
+                } else {
+                    content.insertBefore(results[index].element, content.firstChild);
+                }
+
+                index--;
+                number++;
+            }
+
+            // New item added
+            test = true;
+        }
+
+        return test;
     }
 
     obj.loadDown = function() {
@@ -4106,24 +4335,25 @@ jSuites.dropdown = (function(el, options) {
             var results = obj.items;
         }
 
-        if (results.length > obj.numOfItems) {
-            var numberOfItems = obj.numOfItems;
-            var number = results.length - numberOfItems;
-            if (number > 200) {
-                number = 200;
-            }
+        var items = content.querySelectorAll('.jdropdown-item');
+        var lastItem = items[items.length-1].indexValue;
+        lastItem = obj.items[lastItem];
+        var index = results.indexOf(lastItem) + 1;
 
-            for (var i = numberOfItems; i < numberOfItems + number; i++) {
-                if (results[i].group) {
-                    if (! results[i].group.parentNode) {
-                        content.appendChild(results[i].group);
+        if (index < results.length) {
+            var number = 0;
+            while (index < results.length && results[index] && number < 200) {
+                if (results[index].group) {
+                    if (! results[index].group.parentNode) {
+                        content.appendChild(results[index].group);
                     }
-                    results[i].group.children[2].appendChild(results[i].element);
+                    results[index].group.lastChild.appendChild(results[index].element);
                 } else {
-                    content.appendChild(results[i].element);
+                    content.appendChild(results[index].element);
                 }
 
-                obj.numOfItems++;
+                index++;
+                number++;
             }
 
             // New item added
@@ -4141,32 +4371,61 @@ jSuites.dropdown = (function(el, options) {
 jSuites.dropdown.keydown = function(e) {
     var dropdown = null;
     if (dropdown = jSuites.dropdown.current) {
-        if (e.which == 13) {
-            // Quick Select/Filter
-            if (dropdown.currentIndex == null && dropdown.options.autocomplete == true && dropdown.header.value != "") {
-                dropdown.find(dropdown.header.value);
+        if (e.which == 13 || e.which == 9) {  // enter or tab
+            if (dropdown.header.value && dropdown.currentIndex == null && dropdown.options.newOptions) {
+                // if they typed something in, but it matched nothing, and newOptions are allowed, start that flow
+                dropdown.add();
+            } else {
+                // Quick Select/Filter
+                if (dropdown.currentIndex == null && dropdown.options.autocomplete == true && dropdown.header.value != "") {
+                    dropdown.find(dropdown.header.value);
+                }
+                dropdown.selectIndex(dropdown.currentIndex);
             }
-            dropdown.selectIndex(dropdown.currentIndex);
-        } else if (e.which == 38) {
+        } else if (e.which == 38) {  // up arrow
             if (dropdown.currentIndex == null) {
-                dropdown.firstVisible();
+                dropdown.first();
             } else if (dropdown.currentIndex > 0) {
                 dropdown.prev();
             }
             e.preventDefault();
-        } else if (e.which == 40) {
+        } else if (e.which == 40) {  // down arrow
             if (dropdown.currentIndex == null) {
-                dropdown.firstVisible();
+                dropdown.first();
             } else if (dropdown.currentIndex + 1 < dropdown.items.length) {
                 dropdown.next();
             }
             e.preventDefault();
         } else if (e.which == 36) {
             dropdown.first();
+            if (! e.target.classList.contains('jdropdown-header')) {
+                e.preventDefault();
+            }
         } else if (e.which == 35) {
             dropdown.last();
+            if (! e.target.classList.contains('jdropdown-header')) {
+                e.preventDefault();
+            }
         } else if (e.which == 27) {
             dropdown.close();
+        } else if (e.which == 33) {  // page up
+            if (dropdown.currentIndex == null) {
+                dropdown.first();
+            } else if (dropdown.currentIndex > 0) {
+                for (var i = 0; i < 7; i++) {
+                    dropdown.prev()
+                }
+            }
+            e.preventDefault();
+        } else if (e.which == 34) {  // page down
+            if (dropdown.currentIndex == null) {
+                dropdown.first();
+            } else if (dropdown.currentIndex + 1 < dropdown.items.length) {
+                for (var i = 0; i < 7; i++) {
+                    dropdown.next()
+                }
+            }
+            e.preventDefault();
         }
     }
 }
@@ -4751,6 +5010,10 @@ jSuites.editor = (function(el, options) {
     }
 
     obj.addImage = function(src, asSnippet) {
+        if (! src) {
+            src = '';
+        }
+
         if (src.substr(0,4) != 'data' && ! obj.options.remoteParser) {
             console.error('remoteParser not defined in your initialization');
         } else {
@@ -5023,7 +5286,10 @@ jSuites.editor = (function(el, options) {
     }
 
     // Elements to be removed
-    var remove = [HTMLUnknownElement];
+    var remove = [HTMLUnknownElement,HTMLAudioElement,HTMLEmbedElement,HTMLIFrameElement,HTMLTextAreaElement,HTMLInputElement,HTMLScriptElement];
+
+    // Valid properties
+    var validProperty = ['width', 'height', 'align', 'border', 'src', 'tabindex'];
 
     // Valid CSS attributes
     var validStyle = ['color', 'font-weight', 'font-size', 'background', 'background-color', 'margin'];
@@ -5048,21 +5314,28 @@ jSuites.editor = (function(el, options) {
                }
            }
            // Process image
-           if (element.tagName == 'IMG') {
-               if (! obj.options.acceptImages) {
-                   element.remove();
+           if (element.tagName.toUpperCase() == 'IMG') {
+               if (! obj.options.acceptImages || ! element.src) {
+                   element.parentNode.removeChild(element);
                } else {
                    // Check if is data
                    element.setAttribute('tabindex', '900');
                    // Check attributes for persistance
                    obj.addImage(element.src);
                }
-           } else {
-               // Remove attributes
-               var numAttributes = element.attributes.length - 1;
+           }
+           // Remove attributes
+           var attr = [];
+           var numAttributes = element.attributes.length - 1;
+           if (numAttributes > 0) {
                for (var i = numAttributes; i >= 0 ; i--) {
-                   element.removeAttribute(element.attributes[i].name);
+                   attr.push(element.attributes[i].name);
                }
+               attr.forEach(function(v) {
+                   if (validProperty.indexOf(v) == -1) {
+                       element.removeAttribute(v);
+                   }
+               });
            }
            element.style = '';
            // Add valid style
@@ -5086,9 +5359,11 @@ jSuites.editor = (function(el, options) {
         if (data) {
             data = data.replace(new RegExp('<!--(.*?)-->', 'gsi'), '');
         }
+        var parser = new DOMParser();
+        var d = parser.parseFromString(data, "text/html");
+        parse(d);
         var span = document.createElement('span');
-        span.innerHTML = data;
-        parse(span);
+        span.innerHTML = d.firstChild.innerHTML;
         return span;
     } 
 
@@ -5514,6 +5789,416 @@ jSuites.editor.getDefaultToolbar = function() {
     ];
 }
 
+
+jSuites.form = (function(el, options) {
+    var obj = {};
+    obj.options = {};
+
+    // Default configuration
+    var defaults = {
+        url: null,
+        message: 'Are you sure? There are unsaved information in your form',
+        ignore: false,
+        currentHash: null,
+        submitButton:null,
+        validations: null,
+        onbeforeload: null,
+        onload: null,
+        onbeforesave: null,
+        onsave: null,
+        onbeforeremove: null,
+        onremove: null,
+        onerror: function(el, message) {
+            jSuites.alert(message);
+        }
+    };
+
+    // Loop through our object
+    for (var property in defaults) {
+        if (options && options.hasOwnProperty(property)) {
+            obj.options[property] = options[property];
+        } else {
+            obj.options[property] = defaults[property];
+        }
+    }
+
+    // Validations
+    if (! obj.options.validations) {
+        obj.options.validations = {};
+    }
+
+    // Submit Button
+    if (! obj.options.submitButton) {
+        obj.options.submitButton = el.querySelector('input[type=submit]');
+    }
+
+    if (obj.options.submitButton && obj.options.url) {
+        obj.options.submitButton.onclick = function() {
+            obj.save();
+        }
+    }
+
+    if (! obj.options.validations.email) {
+        obj.options.validations.email = jSuites.validations.email;
+    }
+
+    if (! obj.options.validations.length) {
+        obj.options.validations.length = jSuites.validations.length;
+    }
+
+    if (! obj.options.validations.required) {
+        obj.options.validations.required = jSuites.validations.required;
+    }
+
+    obj.setUrl = function(url) {
+        obj.options.url = url;
+    }
+
+    obj.load = function() {
+        jSuites.ajax({
+            url: obj.options.url,
+            method: 'GET',
+            dataType: 'json',
+            queue: true,
+            success: function(data) {
+                // Overwrite values from the backend
+                if (typeof(obj.options.onbeforeload) == 'function') {
+                    var ret = obj.options.onbeforeload(el, data);
+                    if (ret) {
+                        data = ret;
+                    }
+                }
+                // Apply values to the form
+                jSuites.form.setElements(el, data);
+                // Onload methods
+                if (typeof(obj.options.onload) == 'function') {
+                    obj.options.onload(el, data);
+                }
+            }
+        });
+    }
+
+    obj.save = function() {
+        var test = obj.validate();
+
+        if (test) {
+            obj.options.onerror(el, test);
+        } else {
+            var data = jSuites.form.getElements(el, true);
+
+            if (typeof(obj.options.onbeforesave) == 'function') {
+                var data = obj.options.onbeforesave(el, data);
+
+                if (data === false) {
+                    return; 
+                }
+            }
+
+            jSuites.ajax({
+                url: obj.options.url,
+                method: 'POST',
+                dataType: 'json',
+                data: data,
+                success: function(result) {
+                    if (typeof(obj.options.onsave) == 'function') {
+                        obj.options.onsave(el, data, result);
+                    }
+                }
+            });
+        }
+    }
+
+    obj.remove = function() {
+        if (typeof(obj.options.onbeforeremove) == 'function') {
+            var ret = obj.options.onbeforeremove(el, obj);
+            if (ret === false) {
+                return false;
+            }
+        }
+
+        jSuites.ajax({
+            url: obj.options.url,
+            method: 'DELETE',
+            dataType: 'json',
+            success: function(result) {
+                if (typeof(obj.options.onremove) == 'function') {
+                    obj.options.onremove(el, obj, result);
+                }
+
+                obj.reset();
+            }
+        });
+    }
+
+    var addError = function(element) {
+        // Add error in the element
+        element.classList.add('error');
+        // Submit button
+        if (obj.options.submitButton) {
+            obj.options.submitButton.setAttribute('disabled', true);
+        }
+        // Return error message
+        var error = element.getAttribute('data-error') || 'There is an error in the form';
+        element.setAttribute('title', error);
+        return error;
+    }
+
+    var delError = function(element) {
+        var error = false;
+        // Remove class from this element
+        element.classList.remove('error');
+        element.removeAttribute('title');
+        // Get elements in the form
+        var elements = el.querySelectorAll("input, select, textarea, div[name]");
+        // Run all elements 
+        for (var i = 0; i < elements.length; i++) {
+            if (elements[i].getAttribute('data-validation')) {
+                if (elements[i].classList.contains('error')) {
+                    error = true;
+                }
+            }
+        }
+
+        if (obj.options.submitButton) {
+            if (error) {
+                obj.options.submitButton.setAttribute('disabled', true);
+            } else {
+                obj.options.submitButton.removeAttribute('disabled');
+            }
+        }
+    }
+
+    obj.validateElement = function(element) {
+        // Test results
+        var test = false;
+        // Value
+        var value = jSuites.form.getValue(element);
+        // Validation
+        var validation = element.getAttribute('data-validation');
+        // Parse
+        if (typeof(obj.options.validations[validation]) == 'function' && ! obj.options.validations[validation](value, element)) {
+            // Not passed in the test
+            test = addError(element);
+        } else {
+            if (element.classList.contains('error')) {
+                delError(element);
+            }
+        }
+
+        return test;
+    }
+
+    obj.reset = function() {
+        // Get elements in the form
+        var name = null;
+        var elements = el.querySelectorAll("input, select, textarea, div[name]");
+        // Run all elements 
+        for (var i = 0; i < elements.length; i++) {
+            if (name = elements[i].getAttribute('name')) {
+                if (elements[i].type == 'checkbox' || elements[i].type == 'radio') {
+                    elements[i].checked = false;
+                } else {
+                    if (typeof(elements[i].val) == 'function') {
+                        elements[i].val('');
+                    } else {
+                        elements[i].value = '';
+                    }
+                }
+            }
+        }
+    }
+
+    // Run form validation
+    obj.validate = function() {
+        var test = [];
+        // Get elements in the form
+        var elements = el.querySelectorAll("input, select, textarea, div[name]");
+        // Run all elements 
+        for (var i = 0; i < elements.length; i++) {
+            // Required
+            if (elements[i].getAttribute('data-validation')) {
+                var res = obj.validateElement(elements[i]);
+                if (res) {
+                    test.push(res);
+                }
+            }
+        }
+        if (test.length > 0) {
+            return test.join('<br>');
+        } else {
+            return false;
+        }
+    }
+
+    // Check the form
+    obj.getError = function() {
+        // Validation
+        return obj.validation() ? true : false;
+    }
+
+    // Return the form hash
+    obj.setHash = function() {
+        return obj.getHash(jSuites.form.getElements(el));
+    }
+
+    // Get the form hash
+    obj.getHash = function(str) {
+        var hash = 0, i, chr;
+
+        if (str.length === 0) {
+            return hash;
+        } else {
+            for (i = 0; i < str.length; i++) {
+              chr = str.charCodeAt(i);
+              hash = ((hash << 5) - hash) + chr;
+              hash |= 0;
+            }
+        }
+
+        return hash;
+    }
+
+    // Is there any change in the form since start tracking?
+    obj.isChanged = function() {
+        var hash = obj.setHash();
+        return (obj.options.currentHash != hash);
+    }
+
+    // Restart tracking
+    obj.resetTracker = function() {
+        obj.options.currentHash = obj.setHash();
+        obj.options.ignore = false;
+    }
+
+    // Ignore flag
+    obj.setIgnore = function(ignoreFlag) {
+        obj.options.ignore = ignoreFlag ? true : false;
+    }
+
+    // Start tracking in one second
+    setTimeout(function() {
+        obj.options.currentHash = obj.setHash();
+    }, 1000);
+
+    // Validations
+    el.addEventListener("keyup", function(e) {
+        if (e.target.getAttribute('data-validation')) {
+            obj.validateElement(e.target);
+        }
+    });
+
+    // Alert
+    if (! jSuites.form.hasEvents) {
+        window.addEventListener("beforeunload", function (e) {
+            if (obj.isChanged() && obj.options.ignore == false) {
+                var confirmationMessage =  obj.options.message? obj.options.message : "\o/";
+
+                if (confirmationMessage) {
+                    if (typeof e == 'undefined') {
+                        e = window.event;
+                    }
+
+                    if (e) {
+                        e.returnValue = confirmationMessage;
+                    }
+
+                    return confirmationMessage;
+                } else {
+                    return void(0);
+                }
+            }
+        });
+
+        jSuites.form.hasEvents = true;
+    }
+
+    el.form = obj;
+
+    return obj;
+});
+
+// Get value from one element
+jSuites.form.getValue = function(element) {
+    var value = null;
+    if (element.type == 'checkbox') {
+        if (element.checked == true) {
+            value = element.value || true;
+        }
+    } else if (element.type == 'radio') {
+        if (element.checked == true) {
+            value = element.value;
+        }
+    } else if (element.tagName == 'select' && element.multiple == true) {
+        value = [];
+        var options = element.querySelectorAll("options[selected]");
+        for (var j = 0; j < options.length; j++) {
+            value.push(options[j].value);
+        }
+    } else if (typeof(element.val) == 'function') {
+        value = element.val();
+    } else {
+        value = element.value || '';
+    }
+
+    return value;
+}
+
+// Get form elements
+jSuites.form.getElements = function(el, asArray) {
+    var data = {};
+    var name = null;
+    var elements = el.querySelectorAll("input, select, textarea, div[name]");
+
+    for (var i = 0; i < elements.length; i++) {
+        if (name = elements[i].getAttribute('name')) {
+            data[name] = jSuites.form.getValue(elements[i]) || '';
+        }
+    }
+
+    return asArray == true ? data : JSON.stringify(data);
+}
+
+//Get form elements
+jSuites.form.setElements = function(el, data) {
+    var name = null;
+    var value = null;
+    var elements = el.querySelectorAll("input, select, textarea, div[name]");
+    for (var i = 0; i < elements.length; i++) {
+        // Attributes
+        var type = elements[i].getAttribute('type');
+        if (name = elements[i].getAttribute('name')) {
+            // Transform variable names in pathname
+            name = name.replace(new RegExp(/\[(.*?)\]/ig), '.$1');
+            value = null;
+            // Seach for the data in the path
+            if (name.match(/\./)) {
+                var tmp = jSuites.path.call(data, name) || '';
+                if (typeof(tmp) !== 'undefined') {
+                    value = tmp;
+                }
+            } else {
+                if (typeof(data[name]) !== 'undefined') {
+                    value = data[name];
+                }
+            }
+            // Set the values
+            if (value !== null) {
+                if (type == 'checkbox' || type == 'radio') {
+                    elements[i].checked = value ? true : false;
+                } else {
+                    if (typeof (elements[i].val) == 'function') {
+                        elements[i].val(value);
+                    } else {
+                        elements[i].value = value;
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Legacy
+jSuites.tracker = jSuites.form;
 
 jSuites.focus = function(el) {
     if (el.innerText.length) {
@@ -6261,24 +6946,33 @@ jSuites.lazyLoading = (function(el, options) {
     // Controls
     var scrollControls = function(e) {
         if (timeControlLoading == null) {
+            var event = false;
             var scrollTop = el.scrollTop;
             if (el.scrollTop + (el.clientHeight * 2) >= el.scrollHeight) {
                 if (options.loadDown()) {
                     if (scrollTop == el.scrollTop) {
                         el.scrollTop = el.scrollTop - (el.clientHeight);
                     }
+                    event = true;
                 }
             } else if (el.scrollTop <= el.clientHeight) {
                 if (options.loadUp()) {
                     if (scrollTop == el.scrollTop) {
                         el.scrollTop = el.scrollTop + (el.clientHeight);
                     }
+                    event = true;
                 }
             }
 
             timeControlLoading = setTimeout(function() {
                 timeControlLoading = null;
             }, options.timer);
+
+            if (event) {
+                if (typeof(options.onupdate) == 'function') {
+                    options.onupdate();
+                }
+            }
         }
     }
 
@@ -6317,492 +7011,1529 @@ jSuites.loading = (function() {
 })();
 
 jSuites.mask = (function() {
-    var obj = {};
-    var index = 0;
-    var values = []
-    var pieces = [];
+    // Currency 
+    var tokens = {
+        // Currency tokens
+        currency: [ '#(.{1})##0?(.{1}0+)?( ?;(.*)?)?', '#' ],
+        // Percentage
+        percentage: [ '0{1}(.{1}0+)?%' ],
+        // Number
+        numeric: [ '0{1}(.{1}0+)?' ],
+        // Data tokens
+        datetime: [ 'YYYY', 'YYY', 'YY', 'MMMMM', 'MMMM', 'MMM', 'MM', 'DDDDD', 'DDDD', 'DDD', 'DD', 'DY', 'DAY', 'WD', 'D', 'Q', 'HH24', 'HH12', 'HH', '\\[H\\]', 'H', 'AM/PM', 'PM', 'AM', 'MI', 'SS', 'MS', 'MONTH', 'MON', 'Y', 'M' ],
+        // Other
+        general: [ 'A', '0', '[0-9a-zA-Z\$]+', '.']
+    }
 
+    var getDate = function() {
+        if (this.mask.toLowerCase().indexOf('[h]') !== -1) {
+            var m = 0;
+            if (this.date[4]) {
+                m = parseFloat(this.date[4] / 60);
+            }
+            var v = parseInt(this.date[3]) + m;
+            v /= 24;
+        } else if (! (this.date[0] && this.date[1] && this.date[2]) && (this.date[3] || this.date[4])) {
+            v = jSuites.two(this.date[3]) + ':' + jSuites.two(this.date[4]) + ':' + jSuites.two(this.date[5]) 
+        } else {
+            if (this.date[0] && this.date[1] && ! this.date[2]) {
+                this.date[2] = 1;
+            }
+            v = jSuites.two(this.date[0]) + '-' + jSuites.two(this.date[1]) + '-' + jSuites.two(this.date[2]);
+
+            if (this.date[3] || this.date[4] || this.date[5]) {
+                v += ' ' + jSuites.two(this.date[3]) + ':' + jSuites.two(this.date[4]) + ':' + jSuites.two(this.date[5]);
+            }
+        }
+
+        return v;
+    }
+
+    var isBlank = function(v) {
+        return v === null || v === '' || v === undefined ? true : false;
+    }
+
+    var isFormula = function(value) {
+        return (''+value).chartAt(0) == '=';
+    }
+
+    var isNumeric = function(t) {
+        return t === 'currency' || t === 'percentage' || t === 'numeric' ? true : false;
+    }
     /**
-     * Apply a mask over a value considering a custom decimal representation. Default: '.'
+     * Get the decimal defined in the mask configuration
      */
-    obj.run = function(value, mask, decimal) {
-        if (value.toString().length && mask.toString().length) {
-            // Default decimal separator
-            if (typeof(decimal) == 'undefined') {
-                decimal = '.';
-            }
-
-            if (jSuites.isNumeric(value) && typeof(value) == 'number') {
-                var number = (''+value).split('.');
-
-                // Rouding
-                if (number[1] && mask.indexOf(decimal)) {
-                    var t = mask.split(decimal);
-                    if (t = (''+t[1]).length) {
-                        value = value.toFixed(t);
-                    }
-                }
-
-                number = (''+value).split('.');
+    var getDecimal = function(v) {
+        if (v && Number(v) == v) {
+            return '.';
+        } else {
+            if (this.options.decimal) {
+                return this.options.decimal;
             } else {
-                var number = (''+value).split(decimal);
-            }
-
-            var value = number[0];
-            var valueDecimal = number[1];
-
-            // Helpers
-            index = 0;
-            values = [];
-            // Create mask token
-            obj.prepare(mask);
-            // Current value
-            var v = value;
-            if (v) {
-                // Checking current value
-                for (var i = 0; i < v.length; i++) {
-                    if (v[i] != null) {
-                        obj.process(v[i]);
+                if (this.locale) {
+                    var t = Intl.NumberFormat(this.locale).format(1.1);
+                    return this.options.decimal = t[1];
+                } else {
+                    if (! v) {
+                        v  = this.mask;
+                    }
+                    var e = new RegExp('0{1}(.{1})0+', 'ig');
+                    var t = e.exec(v);
+                    if (t && t[1] && t[1].length == 1) {
+                        // Save decimal
+                        this.options.decimal = t[1];
+                        // Return decimal
+                        return t[1];
+                    } else {
+                        // Did not find any decimal last resort the default
+                        var e = new RegExp('#,##', 'ig');
+                        if ((v && v.match(e)) || '1.1'.toLocaleString().substring(1,2) == '.') {
+                            this.options.decimal = '.';
+                        } else {
+                            this.options.decimal = ',';
+                        }
                     }
                 }
             }
-            value = values.join('');
-            if (valueDecimal) {
-                value += (decimal + valueDecimal);
+        }
+
+        if (this.options.decimal) {
+            return this.options.decimal;
+        } else {
+            return null;
+        }
+    }
+
+    var ParseValue = function(v, decimal) {
+        if (v == '') {
+            return '';
+        }
+
+        // Get decimal
+        if (! decimal) {
+            decimal = getDecimal.call(this);
+        }
+
+        // New value
+        v = (''+v).split(decimal);
+        v[0] = v[0].match(/[\-0-9]+/g, '');
+        if (v[0]) {
+            v[0] = v[0].join('');
+        }
+        if (v[0] || v[1]) {
+            if (v[1] !== undefined) {
+                v[1] = v[1].match(/[0-9]+/g, '');
+                if (v[1]) {
+                    v[1] = v[1].join('');
+                } else {
+                    v[1] = '';
+                }
             }
-            // Formatted value
-            return value;
         } else {
             return '';
         }
+
+        return v;
+    }
+
+    var FormatValue = function(v) {
+        if (v == '') {
+            return '';
+        }
+        // Get decimal
+        var d = getDecimal.call(this);
+        // Convert value
+        var o = Object.create(this.options || {});
+        if (! o.minimumFractionDigits) {
+            o.minimumFractionDigits = 1;
+        }
+        // Parse value
+        v = ParseValue.call(this, v);
+        if (v == '') {
+            return '';
+        }
+        // Temporary value
+        if (v[0]) {
+            var t = parseFloat(v.join('.'));
+            if (o.style == 'percent') {
+                t /= 100;
+            }
+        } else {
+            var t = null;
+        }
+        var n = new Intl.NumberFormat(this.locale, o).format(t);
+        n = n.split(d);
+        var s = n[1].replace(/[0-9]*/g, '');
+        if (s) {
+            n[2] = s;
+        }
+        if (v[1] !== undefined) {
+            n[1] = d + v[1];
+        } else {
+            n[1] = '';
+        }
+
+        return n.join('');
+    }
+
+    var Format = function(e) {
+        var v = Value.call(e);
+        if (! v) {
+            return;
+        }
+
+        // Get decimal
+        var d = getDecimal.call(this);
+        var n = FormatValue.call(this, v);
+        var t = (n.length) - v.length;
+        var index = Caret.call(e) + t;
+        // Set value and update caret
+        Value.call(e, n, index, true);
+    }
+
+    var Extract = function(v) {
+        // Keep the raw value
+        var current = ParseValue.call(this, v);
+        if (current) {
+            return parseFloat(current.join('.'));
+        }
+        return null;
     }
 
     /**
-     * Process new string by keydown or paste
+     * Caret getter and setter methods
      */
-    var execute = function(str) {
-        index = 0;
-        values = [];
-        // Create mask token
-        obj.prepare(this.getAttribute('data-mask'));
-        // Current value
-        var currentValue = '';
-        // Process selection
-        if (this.tagName == 'DIV') {
-            if (this.innerText) {
+    var Caret = function(index, adjustNumeric) {
+        if (index === undefined) {
+            if (this.tagName == 'DIV') {
+                var pos = 0;
                 var s = window.getSelection();
-                if (s && s.anchorOffset != s.focusOffset) {
-                    var offset = s.anchorOffset > s.focusOffset ? s.focusOffset : s.anchorOffset;
-                    var currentValue = this.innerText.substring(0, offset);
-                } else {
-                    var currentValue = this.innerText;
+                if (s) {
+                    if (s.rangeCount !== 0) {
+                        var r = s.getRangeAt(0);
+                        var p = r.cloneRange();
+                        p.selectNodeContents(this);
+                        p.setEnd(r.endContainer, r.endOffset);
+                        pos = p.toString().length;
+                    }
                 }
+                return pos;
+            } else {
+                return this.selectionStart;
             }
         } else {
-            if (this.selectionStart < this.selectionEnd) {
-                var currentValue = this.value.substring(0, this.selectionStart); 
-            } else {
-                var currentValue = this.value;
+            // Get the current value
+            var n = Value.call(this);
+
+            // Review the position
+            if (adjustNumeric) {
+                var p = null;
+                for (var i = 0; i < n.length; i++) {
+                    if (n[i].match(/[\-0-9]/g) || n[i] == '.' || n[i] == ',') {  
+                        p = i;
+                    }
+                }
+
+                // If the string has no numbers
+                if (p === null) {
+                    p = n.indexOf(' ');
+                }
+
+                if (index >= p) {
+                    index = p + 1;
+                }
+            }
+
+            // Do not update caret
+            if (index > n.length) {
+                index = n.length;
+            }
+
+            if (index) {
+                // Set caret
+                if (this.tagName == 'DIV') {
+                    var s = window.getSelection();
+                    var r = document.createRange();
+                    r.setStart(this.childNodes[0], index);
+                    s.removeAllRanges();
+                    s.addRange(r);
+                } else {
+                    this.selectionStart = index;
+                    this.selectionEnd = index;
+                }
             }
         }
+    }
 
-        // New string to the input
-        currentValue += str;
-
-        // Checking current value
-        for (var i = 0; i < currentValue.length; i++) {
-            if (currentValue[i] != null) {
-                obj.process(currentValue[i]);
-            }
-        }
-
-        // New value 
-        var value = values.join('');
-
-        // Update value to the element
+    /**
+     * Value getter and setter method
+     */
+    var Value = function(v, updateCaret, adjustNumeric) {
         if (this.tagName == 'DIV') {
-            if (value != this.innerText) {
-                this.innerText = value;
-                // Set focus
-                jSuites.focus(this);
-            }
-        } else {
-            this.value = value;
-        }
+            if (v === undefined) {
+                return this.innerText;
+            } else {
+                if (this.innerText !== v) {
+                    this.innerText = v;
 
-        // Completed attribute
-        if (pieces.length == values.length && pieces[pieces.length-1].length == values[values.length-1].length) {
-            this.setAttribute('data-completed', 'true');
-        } else {
-            this.setAttribute('data-completed', 'false');
-        }
-    }
-
-    obj.apply = function(e) {
-        if (e.target && ! e.target.getAttribute('readonly')) {
-            var mask = e.target.getAttribute('data-mask');
-            if (mask && e.key && e.key.length < 2 && ! e.ctrlKey) {
-                // Prevent default
-                e.preventDefault();
-                // Process new char
-                execute.call(e.target, e.key);
-            }
-        }
-    }
-
-    obj.paste = function(e) {
-        if (e.target && ! e.target.getAttribute('readonly')) {
-            // Only apply paste to jsuites mask elements
-            var mask = e.target.getAttribute('data-mask');
-            if (mask) {
-                // Get the pasted text
-                if (e.clipboardData || e.originalEvent.clipboardData) {
-                    var text = (e.originalEvent || e).clipboardData.getData('text/plain');
-                } else if (window.clipboardData) {
-                    var text = window.clipboardData.getData('Text');
+                    if (updateCaret) {
+                        Caret.call(this, updateCaret, adjustNumeric);
+                    }
                 }
-                // Process the new text
-                if (text) {
-                    // Prevent default
-                    e.preventDefault();
-                    // Process new information
-                    execute.call(e.target, text);
+            }
+        } else {
+            if (v === undefined) {
+                return this.value;
+            } else {
+                if (this.value !== v) {
+                    this.value = v;
+                    if (updateCaret) {
+                        Caret.call(this, updateCaret, adjustNumeric);
+                    }
+                }
+            }
+        }
+    }
+
+    // Labels
+    var weekDaysFull = jSuites.calendar.weekdays;
+    var weekDays = jSuites.calendar.weekdaysShort;
+    var monthsFull = jSuites.calendar.months;
+    var months = jSuites.calendar.monthsShort;
+
+    var parser = {
+        'YEAR': function(v, s) {
+            var y = ''+new Date().getFullYear();
+
+            if (typeof(this.values[this.index]) === 'undefined') {
+                this.values[this.index] = '';
+            }
+            if (parseInt(v) >= 0 && parseInt(v) <= 10) {
+                if (this.values[this.index].length < s) {
+                    this.values[this.index] += v;
+                }
+            }
+            if (this.values[this.index].length == s) {
+                if (s == 2) {
+                    var y = y.substr(0,2) + this.values[this.index];
+                } else if (s == 3) {
+                    var y = y.substr(0,1) + this.values[this.index];
+                } else if (s == 4) {
+                    var y = this.values[this.index];
+                }
+                this.date[0] = y;
+                this.index++;
+            }
+        },
+        'YYYY': function(v) {
+            parser.YEAR.call(this, v, 4);
+        },
+        'YYY': function(v) {
+            parser.YEAR.call(this, v, 3);
+        },
+        'YY': function(v) {
+            parser.YEAR.call(this, v, 2);
+        },
+        'FIND': function(v, a) {
+            if (isBlank(this.values[this.index])) {
+                this.values[this.index] = '';
+            }
+            var pos = 0;
+            var count = 0;
+            var value = (this.values[this.index] + v).toLowerCase();
+            for (var i = 0; i < a.length; i++) {
+                if (a[i].toLowerCase().indexOf(value) == 0) {
+                    pos = i;
+                    count++;
+                }
+            }
+            if (count > 1) {
+                this.values[this.index] += v;
+            } else if (count == 1) {
+                this.values[this.index] = a[pos];
+                this.index++;
+
+                return pos;
+            }
+        },
+        'MMM': function(v) {
+            var ret = parser.FIND.call(this, v, months);
+            if (ret !== undefined) {
+                this.date[1] = ret + 1;
+            }
+        },
+        'MMMM': function(v) {
+            var ret = parser.FIND.call(this, v, monthsFull);
+            if (ret !== undefined) {
+                this.date[1] = ret + 1;
+            }
+        },
+        'MMMMM': function(v) {
+            if (isBlank(this.values[this.index])) {
+                this.values[this.index] = '';
+            }
+            var pos = 0;
+            var count = 0;
+            var value = (this.values[this.index] + v).toLowerCase();
+            for (var i = 0; i < monthsFull.length; i++) {
+                if (monthsFull[i][0].toLowerCase().indexOf(value) == 0) {
+                    this.values[this.index] = monthsFull[i][0];
+                    this.date[1] = i + 1;
+                    this.index++;
+                    break;
+                }
+            }
+        },
+        'MM': function(v) {
+            if (isBlank(this.values[this.index])) {
+                if (parseInt(v) > 1 && parseInt(v) < 10) {
+                    this.date[1] = this.values[this.index] = '0' + v;
+                    this.index++;
+                } else if (parseInt(v) < 2) {
+                    this.values[this.index] = v;
+                }
+            } else {
+                if (this.values[this.index] == 1 && parseInt(v) < 3) {
+                    this.date[1] = this.values[this.index] += v;
+                    this.index++;
+                } else if (this.values[this.index] == 0 && parseInt(v) > 0 && parseInt(v) < 10) {
+                    this.date[1] = this.values[this.index] += v;
+                    this.index++;
+                }
+            }
+        },
+        'M': function(v) {
+            var test = false;
+            if (parseInt(v) >= 0 && parseInt(v) < 10) {
+                if (isBlank(this.values[this.index])) {
+                    this.values[this.index] = v;
+                    if (v > 1) {
+                        this.date[1] = this.values[this.index];
+                        this.index++;
+                    }
+                } else {
+                    if (this.values[this.index] == 1 && parseInt(v) < 3) {
+                        this.date[1] = this.values[this.index] += v;
+                        this.index++;
+                    } else if (this.values[this.index] == 0 && parseInt(v) > 0) {
+                        this.date[1] = this.values[this.index] += v;
+                        this.index++;
+                    } else {
+                        var test = true;
+                    }
+                }
+            } else {
+                var test = true;
+            }
+
+            // Re-test
+            if (test == true) {
+                var t = parseInt(this.values[this.index]);
+                if (t > 0 && t < 12) {
+                    this.date[2] = this.values[this.index];
+                    this.index++;
+                    // Repeat the character
+                    this.position--;
+                }
+            }
+        },
+        'D': function(v) {
+            var test = false;
+            if (parseInt(v) >= 0 && parseInt(v) < 10) {
+                if (isBlank(this.values[this.index])) {
+                    this.values[this.index] = v;
+                    if (parseInt(v) > 3) {
+                        this.date[2] = this.values[this.index];
+                        this.index++;
+                    }
+                } else {
+                    if (this.values[this.index] == 3 && parseInt(v) < 2) {
+                        this.date[2] = this.values[this.index] += v;
+                        this.index++;
+                    } else if (this.values[this.index] == 1 || this.values[this.index] == 2) {
+                        this.date[2] = this.values[this.index] += v;
+                        this.index++;
+                    } else if (this.values[this.index] == 0 && parseInt(v) > 0) {
+                        this.date[2] = this.values[this.index] += v;
+                        this.index++;
+                    } else {
+                        var test = true;
+                    }
+                }
+            } else {
+                var test = true;
+            }
+
+            // Re-test
+            if (test == true) {
+                var t = parseInt(this.values[this.index]);
+                if (t > 0 && t < 32) {
+                    this.date[2] = this.values[this.index];
+                    this.index++;
+                    // Repeat the character
+                    this.position--;
+                }
+            }
+        },
+        'DD': function(v) {
+            if (isBlank(this.values[this.index])) {
+                if (parseInt(v) > 3 && parseInt(v) < 10) {
+                    this.date[2] = this.values[this.index] = '0' + v;
+                    this.index++;
+                } else if (parseInt(v) < 10) {
+                    this.values[this.index] = v;
+                }
+            } else {
+                if (this.values[this.index] == 3 && parseInt(v) < 2) {
+                    this.date[2] = this.values[this.index] += v;
+                    this.index++;
+                } else if ((this.values[this.index] == 1 || this.values[this.index] == 2) && parseInt(v) < 10) {
+                    this.date[2] = this.values[this.index] += v;
+                    this.index++;
+                } else if (this.values[this.index] == 0 && parseInt(v) > 0 && parseInt(v) < 10) {
+                    this.date[2] = this.values[this.index] += v;
+                    this.index++;
+                }
+            }
+        },
+        'DDD': function(v) {
+            parser.FIND.call(this, v, weekDays);
+        },
+        'DDDD': function(v) {
+            parser.FIND.call(this, v, weekDaysFull);
+        },
+        'HH12': function(v, two) {
+            if (isBlank(this.values[this.index])) {
+                if (parseInt(v) > 1 && parseInt(v) < 10) {
+                    if (two) {
+                        v = 0 + v;
+                    }
+                    this.date[3] = this.values[this.index] = v;
+                    this.index++;
+                } else if (parseInt(v) < 10) {
+                    this.values[this.index] = v;
+                }
+            } else {
+                if (this.values[this.index] == 1 && parseInt(v) < 3) {
+                    this.date[3] = this.values[this.index] += v;
+                    this.index++;
+                } else if (this.values[this.index] < 1 && parseInt(v) < 10) {
+                    this.date[3] = this.values[this.index] += v;
+                    this.index++;
+                }
+            }
+        },
+        'HH24': function(v, two) {
+            var test = false;
+            if (parseInt(v) >= 0 && parseInt(v) < 10) {
+                if (this.values[this.index] == null || this.values[this.index] == '') {
+                    if (parseInt(v) > 2 && parseInt(v) < 10) {
+                        if (two) {
+                            v = 0 + v;
+                        }
+                        this.date[3] = this.values[this.index] = v;
+                        this.index++;
+                    } else if (parseInt(v) < 10) {
+                        this.values[this.index] = v;
+                    }
+                } else {
+                    if (this.values[this.index] == 2 && parseInt(v) < 4) {
+                        this.date[3] = this.values[this.index] += v;
+                        this.index++;
+                    } else if (this.values[this.index] < 2 && parseInt(v) < 10) {
+                        this.date[3] = this.values[this.index] += v;
+                        this.index++;
+                    }
+                }
+            }
+        },
+        'HH': function(v) {
+            parser['HH24'].call(this, v, 1);
+        },
+        'H': function(v) {
+            parser['HH24'].call(this, v, 0);
+        },
+        '\\[H\\]': function(v) {
+            if (this.values[this.index] == undefined) {
+                this.values[this.index] = '';
+            }
+            if (v.match(/[0-9]/g)) {
+                this.date[3] = this.values[this.index] += v;
+            } else {
+                if (this.values[this.index].match(/[0-9]/g)) {
+                    this.date[3] = this.values[this.index];
+                    this.index++;
+                    // Repeat the character
+                    this.position--;
+                }
+            }
+        },
+        'N60': function(v, i) {
+            if (this.values[this.index] == null || this.values[this.index] == '') {
+                if (parseInt(v) > 5 && parseInt(v) < 10) {
+                    this.date[i] = this.values[this.index] = '0' + v;
+                    this.index++;
+                } else if (parseInt(v) < 10) {
+                    this.values[this.index] = v;
+                }
+            } else {
+                if (parseInt(v) < 10) {
+                    this.date[i] = this.values[this.index] += v;
+                    this.index++;
+                 }
+            }
+        },
+        'MI': function(v) {
+            parser.N60.call(this, v, 4);
+        },
+        'SS': function(v) {
+            parser.N60.call(this, v, 5);
+        },
+        'AM/PM': function(v) {
+            this.values[this.index] = '';
+            if (v) {
+                if (this.date[3] > 12) {
+                    this.values[this.index] = 'PM';
+                } else {
+                    this.values[this.index] = 'AM';
+                }
+            }
+            this.index++;
+        },
+        'WD': function(v) {
+            if (typeof(this.values[this.index]) === 'undefined') {
+                this.values[this.index] = '';
+            }
+            if (parseInt(v) >= 0 && parseInt(v) < 7) {
+                this.values[this.index] = v;
+            }
+            if (this.value[this.index].length == 1) {
+                this.index++;
+            }
+        },
+        '0{1}(.{1}0+)?': function(v) {
+            // Get decimal
+            var decimal = getDecimal.call(this);
+            // Negative number
+            var neg = false;
+            // Create if is blank
+            if (isBlank(this.values[this.index])) {
+                this.values[this.index] = '';
+            } else {
+                if (this.values[this.index] == '-') {
+                    neg = true;
+                }
+            }
+            var current = ParseValue.call(this, this.values[this.index], decimal);
+            if (current) {
+                this.values[this.index] = current.join(decimal);
+            }
+            // New entry
+            if (parseInt(v) >= 0 && parseInt(v) < 10) {
+                if (this.values[this.index] != '0' || v == decimal) {
+                    this.values[this.index] += v;
+                }
+            } else if (decimal && v == decimal) {
+                if (this.values[this.index].indexOf(decimal) == -1) {
+                    if (! this.values[this.index]) {
+                        this.values[this.index] = '0';
+                    }
+                    this.values[this.index] += v;
+                }
+            } else if (v == '-') {
+                // Negative signed
+                neg = true;
+            }
+
+            if (neg === true && this.values[this.index][0] !== '-') {
+                this.values[this.index] = '-' + this.values[this.index];
+            }
+        },
+        '0{1}(.{1}0+)?%': function(v) {
+            parser['0{1}(.{1}0+)?'].call(this, v);
+
+            if (this.values[this.index].match(/[\-0-9]/g)) {
+                if (this.values[this.index] && this.values[this.index].indexOf('%') == -1) {
+                    this.values[this.index] += '%';
+                }
+            } else {
+                this.values[this.index] = '';
+            }
+        },
+        '#(.{1})##0?(.{1}0+)?( ?;(.*)?)?': function(v) {
+            // Parse number
+            parser['0{1}(.{1}0+)?'].call(this, v);
+            // Get decimal
+            var decimal = getDecimal.call(this);
+            // Get separator
+            var separator = this.tokens[this.index].substr(1,1);
+            // Negative
+            var negative = this.values[this.index][0] === '-' ? true : false;
+            // Current value
+            var current = ParseValue.call(this, this.values[this.index], decimal);
+
+            // Get main and decimal parts
+            if (current !== '') {
+                // Format number
+                var n = current[0].match(/[0-9]/g);
+                if (n) {
+                    // Format
+                    n = n.join('');
+                    var t = [];
+                    var s = 0;
+                    for (var j = n.length - 1; j >= 0 ; j--) {
+                        t.push(n[j]);
+                        s++;
+                        if (! (s % 3)) {
+                            t.push(separator);
+                        }
+                    }
+                    t = t.reverse();
+                    current[0] = t.join('');
+                    if (current[0].substr(0,1) == separator) {
+                        current[0] = current[0].substr(1);
+                    }
+                } else {
+                    current[0] = '';
+                }
+
+                // Value
+                this.values[this.index] = current.join(decimal);
+
+                // Negative
+                if (negative) {
+                    this.values[this.index] = '-' + this.values[this.index];
+                }
+            }
+        },
+        '0': function(v) {
+            if (v.match(/[0-9]/g)) {
+                this.values[this.index] = v;
+                this.index++;
+            }
+        },
+        '[0-9a-zA-Z$]+': function(v) {
+            if (isBlank(this.values[this.index])) {
+                this.values[this.index] = '';
+            }
+            var t = this.tokens[this.index];
+            var s = this.values[this.index];
+            var i = s.length;
+
+            if (t[i] == v) {
+                this.values[this.index] += v;
+
+                if (this.values[this.index] == t) {
+                    this.index++;
+                }
+            } else {
+                this.values[this.index] = t;
+                this.index++;
+
+                if (v.match(/[\-0-9]/g)) {
+                    // Repeat the character
+                    this.position--;
+                }
+            }
+        },
+        'A': function(v) {
+            if (v.match(/[a-zA-Z]/gi)) {
+                this.values[this.index] = v;
+                this.index++;
+            }
+        },
+        '.': function(v) {
+            parser['[0-9a-zA-Z$]+'].call(this, v);
+        }
+    }
+
+    /**
+     * Get the tokens in the mask string
+     */
+    var getTokens = function(str) {
+        if (this.type == 'general') {
+            var t = [].concat(tokens.general);
+        } else {
+            var t = [].concat(tokens.currency, tokens.datetime, tokens.percentage, tokens.numeric, tokens.general);
+        }
+        // Expression to extract all tokens from the string
+        var e = new RegExp(t.join('|'), 'gi');
+        // Extract
+        return str.match(e);
+    }
+
+    /**
+     * Get the method of one given token
+     */
+    var getMethod = function(str) {
+        if (! this.type) {
+            var types = Object.keys(tokens);
+        } else if (this.type == 'general') {
+            var types = [ 'general' ];
+        } else if (this.type == 'datetime') {
+            var types = [ 'numeric', 'datetime', 'general' ];
+        } else {
+            var types = [ 'currency', 'percentage', 'numeric', 'general' ];
+        }
+
+        // Found
+        for (var i = 0; i < types.length; i++) {
+            var type = types[i];
+            for (var j = 0; j < tokens[type].length; j++) {
+                var e = new RegExp(tokens[type][j], 'gi');
+                var r = str.match(e);
+                if (r) {
+                    return { type: type, method: tokens[type][j] }
                 }
             }
         }
     }
 
     /**
-     * Process inputs and save to values
+     * Identify each method for each token
      */
-    obj.process = function(input) {
-        do {
-            if (pieces[index] == 'mm') {
-                if (values[index] == null || values[index] == '') {
-                    if (parseInt(input) > 1 && parseInt(input) < 10) {
-                        values[index] = '0' + input;
-                        index++;
-                        return true;
-                    } else if (parseInt(input) < 10) {
-                        values[index] = input;
-                        return true;
-                    } else {
-                        return false;
-                    }
-                } else {
-                    if (values[index] == 1 && values[index] < 2 && parseInt(input) < 3) {
-                        values[index] += input;
-                        index++;
-                        return true;
-                    } else if (values[index] == 0 && values[index] < 10) {
-                        values[index] += input;
-                        index++;
-                        return true;
-                    } else {
-                        return false
-                    }
-                }
-            } else if (pieces[index] == 'dd') {
-                if (values[index] == null || values[index] == '') {
-                    if (parseInt(input) > 3 && parseInt(input) < 10) {
-                        values[index] = '0' + input;
-                        index++;
-                        return true;
-                    } else if (parseInt(input) < 10) {
-                        values[index] = input;
-                        return true;
-                    } else {
-                        return false;
-                    }
-                } else {
-                    if (values[index] == 3 && parseInt(input) < 2) {
-                        values[index] += input;
-                        index++;
-                        return true;
-                    } else if (values[index] < 3 && parseInt(input) < 10) {
-                        values[index] += input;
-                        index++;
-                        return true;
-                    } else {
-                        return false
-                    }
-                }
-            } else if (pieces[index] == 'hh24') {
-                if (values[index] == null || values[index] == '') {
-                    if (parseInt(input) > 2 && parseInt(input) < 10) {
-                        values[index] = '0' + input;
-                        index++;
-                        return true;
-                    } else if (parseInt(input) < 10) {
-                        values[index] = input;
-                        return true;
-                    } else {
-                        return false;
-                    }
-                } else {
-                    if (values[index] == 2 && parseInt(input) < 4) {
-                        values[index] += input;
-                        index++;
-                        return true;
-                    } else if (values[index] < 2 && parseInt(input) < 10) {
-                        values[index] += input;
-                        index++;
-                        return true;
-                    } else {
-                        return false
-                    }
-                }
-            } else if (pieces[index] == 'hh') {
-                if (values[index] == null || values[index] == '') {
-                    if (parseInt(input) > 1 && parseInt(input) < 10) {
-                        values[index] = '0' + input;
-                        index++;
-                        return true;
-                    } else if (parseInt(input) < 10) {
-                        values[index] = input;
-                        return true;
-                    } else {
-                        return false;
-                    }
-                } else {
-                    if (values[index] == 1 && parseInt(input) < 3) {
-                        values[index] += input;
-                        index++;
-                        return true;
-                    } else if (values[index] < 1 && parseInt(input) < 10) {
-                        values[index] += input;
-                        index++;
-                        return true;
-                    } else {
-                        return false
-                    }
-                }
-            } else if (pieces[index] == 'mi' || pieces[index] == 'ss') {
-                if (values[index] == null || values[index] == '') {
-                    if (parseInt(input) > 5 && parseInt(input) < 10) {
-                        values[index] = '0' + input;
-                        index++;
-                        return true;
-                    } else if (parseInt(input) < 10) {
-                        values[index] = input;
-                        return true;
-                    } else {
-                        return false;
-                    }
-                } else {
-                    if (parseInt(input) < 10) {
-                        values[index] += input;
-                        index++;
-                        return true;
-                     } else {
-                        return false
-                    }
-                }
-            } else if (pieces[index] == 'yy' || pieces[index] == 'yyyy') {
-                if (parseInt(input) < 10) {
-                    if (values[index] == null || values[index] == '') {
-                        values[index] = input;
-                    } else {
-                        values[index] += input;
-                    }
-                    
-                    if (values[index].length == pieces[index].length) {
-                        index++;
-                    }
-                    return true;
-                } else {
-                    return false;
-                }
-            } else if (pieces[index] == '#' || pieces[index] == '#.##' || pieces[index] == '#,##' || pieces[index] == '# ##' || pieces[index] == "#'##") {
-                if (input.match(/[0-9]/g)) {
-                    if (pieces[index] == '#.##') {
-                        var separator = '.';
-                    } else if (pieces[index] == '#,##') {
-                        var separator = ',';
-                    } else if (pieces[index] == '# ##') {
-                        var separator = ' ';
-                    } else if (pieces[index] == "#'##") {
-                        var separator = "'";
-                    } else {
-                        var separator = '';
-                    }
-                    if (values[index] == null || values[index] == '') {
-                        values[index] = input;
-                    } else {
-                        values[index] += input;
-                        if (separator) {
-                            values[index] = values[index].match(/[0-9]/g).join('');
-                            var t = [];
-                            var s = 0;
-                            for (var j = values[index].length - 1; j >= 0 ; j--) {
-                                t.push(values[index][j]);
-                                s++;
-                                if (! (s % 3)) {
-                                    t.push(separator);
-                                }
-                            }
-                            t = t.reverse();
-                            values[index] = t.join('');
-                            if (values[index].substr(0,1) == separator) {
-                                values[index] = values[index].substr(1);
-                            } 
-                        }
-                    }
-                    return true;
-                } else {
-                    if (pieces[index] == '#.##' && input == '.') {
-                        // Do nothing
-                    } else if (pieces[index] == '#,##' && input == ',') {
-                        // Do nothing
-                    } else if (pieces[index] == '# ##' && input == ' ') {
-                        // Do nothing
-                    } else if (pieces[index] == "#'##" && input == "'") {
-                        // Do nothing
-                    } else {
-                        if (values[index]) {
-                            index++;
-                            if (pieces[index]) {
-                                if (pieces[index] == input) {
-                                    values[index] = input;
-                                    return true;
-                                } else {
-                                    if (pieces[index] == '0' && pieces[index+1] == input) {
-                                        index++;
-                                        values[index] = input;
-                                        return true;
-                                    }
-                                }
-                            }
-                        }
-                    }
+    var getMethods = function(t) {
+        var result = [];
+        for (var i = 0; i < t.length; i++) {
+            var m = getMethod.call(this, t[i]);
+            if (m) {
+                result.push(m.method);
+            } else {
+                result.push(null);
+            }
+        }
 
-                    return false;
+        // Compatibility with excel
+        for (var i = 0; i < result.length; i++) {
+            if (result[i] == 'MM') {
+                // Not a month, correct to minutes
+                if (result[i-1] && result[i-1].indexOf('H') >= 0) {
+                    result[i] = 'MI';
+                } else if (result[i-2] && result[i-2].indexOf('H') >= 0) {
+                    result[i] = 'MI';
+                } else if (result[i+1] && result[i+1].indexOf('S') >= 0) {
+                    result[i] = 'MI';
+                } else if (result[i+2] && result[i+2].indexOf('S') >= 0) {
+                    result[i] = 'MI';
                 }
-            } else if (pieces[index] == '0') {
-                if (input.match(/[0-9]/g)) {
-                    values[index] = input;
-                    index++;
-                    return true;
-                } else {
-                    return false;
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * Get the type for one given token
+     */
+    var getType = function(str) {
+        var m = getMethod.call(this, str);
+        if (m) {
+            var type = m.type;
+        }
+
+        if (type) {
+            var numeric = 0;
+            // Make sure the correct type
+            var t = getTokens.call(this, str);
+            for (var i = 0; i < t.length; i++) {
+                m = getMethod.call(this, t[i]);
+                if (m && isNumeric(m.type)) {
+                    numeric++;
                 }
-            } else if (pieces[index] == 'a') {
-                if (input.match(/[a-zA-Z]/g)) {
-                    values[index] = input;
-                    index++;
-                    return true;
-                } else {
-                    return false;
+            }
+            if (numeric > 1) {
+                type = 'general';
+            }
+        }
+
+        return type;
+    }
+
+    /**
+     * Parse character per character using the detected tokens in the mask
+     */
+    var parse = function() {
+        // Parser method for this position
+        if (typeof(parser[this.methods[this.index]]) == 'function') {
+            parser[this.methods[this.index]].call(this, this.value[this.position]);
+            this.position++;
+        } else {
+            this.values[this.index] = this.tokens[this.index];
+            this.index++;
+        }
+    }
+
+    var isFormula = function(value) {
+        var v = (''+value)[0];
+        return v == '=' ? true : false;
+    }
+
+    var toPlainString = function(num) {
+        return (''+ +num).replace(/(-?)(\d*)\.?(\d*)e([+-]\d+)/,
+          function(a,b,c,d,e) {
+            return e < 0
+              ? b + '0.' + Array(1-e-c.length).join(0) + c + d
+              : b + c + d + Array(e-d.length+1).join(0);
+          });
+    }
+
+    /**
+     * Mask function
+     * @param {mixed|string} JS input or a string to be parsed
+     * @param {object|string} When the first param is a string, the second is the mask or object with the mask options
+     */
+    var obj = function(e, config, returnObject) {
+        // Options
+        var r = null;
+        var t = null;
+        var o = {
+            // Element
+            input: null,
+            // Current value
+            value: null,
+            // Mask options
+            options: {},
+            // New values for each token found
+            values: [],
+            // Token position
+            index: 0,
+            // Character position
+            position: 0,
+            // Date raw values
+            date: [0,0,0,0,0,0],
+            // Raw number for the numeric values
+            number: 0,
+        }
+
+        // This is a JavaScript Event
+        if (typeof(e) == 'object') {
+            // Element
+            o.input = e.target;
+            // Current value
+            o.value = Value.call(e.target);
+            // Current caret position
+            o.caret = Caret.call(e.target);
+            // Mask
+            if (t = e.target.getAttribute('data-mask')) {
+                o.mask = t;
+            }
+            // Type
+            if (t = e.target.getAttribute('data-type')) {
+                o.type = t;
+            }
+            // Options
+            if (e.target.mask) {
+                if (e.target.mask.options) {
+                    o.options = e.target.mask.options;
+                }
+                if (e.target.mask.locale) {
+                    o.locale = e.target.mask.locale;
                 }
             } else {
-                if (pieces[index] != null) {
-                    if (pieces[index] == '\\a') {
-                        var v = 'a';
-                    } else if (pieces[index] == '\\0') {
-                        var v = '0';
-                    } else if (pieces[index] == '[-]') {
-                        if (input == '-' || input == '+') {
-                            var v = input;
+                // Locale
+                if (t = e.target.getAttribute('data-locale')) {
+                    o.locale = t;
+                    if (o.mask) {
+                        o.options.style = o.mask;
+                    }
+                }
+            }
+            // Extra configuration
+            if (e.target.attributes && e.target.attributes.length) {
+                for (var i = 0; i < e.target.attributes.length; i++) {
+                    var k = e.target.attributes[i].name;
+                    var v = e.target.attributes[i].value;
+                    if (k.substr(0,4) == 'data') {
+                        o.options[k.substr(5)] = v;
+                    }
+                }
+            }
+        } else {
+            // Options
+            if (typeof(config) == 'string') {
+                // Mask
+                o.mask = config;
+            } else {
+                // Mask
+                var k = Object.keys(config);
+                for (var i = 0; i < k.length; i++) {
+                    o[k[i]] = config[k[i]];
+                }
+            }
+
+            if (typeof(e) === 'number') {
+                // Get decimal
+                getDecimal.call(o, o.mask);
+                // Replace to the correct decimal
+                e = (''+e).replace('.', o.options.decimal);
+            }
+
+            // Current
+            o.value = e;
+
+            if (o.input) {
+                // Value
+                Value.call(o.input, e);
+                // Focus
+                jSuites.focus(o.input);
+                // Caret
+                o.caret = Caret.call(o.input);
+            }
+        }
+
+        // Mask detected start the process
+        if (! isFormula(o.value) && (o.mask || o.locale)) {
+            // Compatibility ixes
+            if (o.mask) {
+                // Legacy
+                o.mask = o.mask.replace('[-]', '');
+                // Excel mask TODO: Improve
+                if (o.mask.indexOf('##')) {
+                    var d = o.mask.split(';');
+                    if (d[0]) {
+                        d[0] = d[0].replace('*', '');
+                        d[0] = d[0].replace(/_/g, '');
+                        d[0] = d[0].replace(/-/g, '');
+                        d[0] = d[0].replace('(','');
+                        d[0] = d[0].replace(')','');
+                        d[0] = d[0].replace('##0.###','##0.000');
+                        d[0] = d[0].replace('##0.##','##0.00');
+                        d[0] = d[0].replace('##0.#','##0.0');
+                    }
+                    o.mask = d[0];
+                }
+                // Get type
+                if (! o.type) {
+                    o.type = getType.call(o, o.mask);
+                }
+                // Get tokens
+                o.tokens = getTokens.call(o, o.mask);
+            }
+            // On new input
+            if (typeof(e) !== 'object' || ! e.inputType || e.inputType == 'insertText' || e.inputType == 'insertFromPaste') {
+                // Start tranformation
+                if (o.locale) {
+                    if (o.input) {
+                        Format.call(o, o.input);
+                    } else {
+                        var newValue = FormatValue.call(o, o.value);
+                    }
+                } else {
+                    // Get tokens
+                    o.methods = getMethods.call(o, o.tokens);
+                    // Go through all tokes
+                    while (o.position < o.value.length && typeof(o.tokens[o.index]) !== 'undefined') {
+                        // Get the approate parser
+                        parse.call(o);
+                    }
+
+                    if (isNumeric(o.type)) {
+                        // Complement things in the end of the mask
+                        while (typeof(o.tokens[o.index]) !== 'undefined') {
+                            var t = getMethod.call(o, o.tokens[o.index]);
+                            if (t && t.type == 'general') {
+                                o.values[o.index] = o.tokens[o.index];
+                            }
+                            o.index++;
+                        }
+
+                        var adjustNumeric = true;
+                    } else {
+                        var adjustNumeric = false;
+                    }
+
+                    // New value
+                    var newValue = o.values.join('');
+
+                    // Reset value
+                    if (o.input) {
+                        t = newValue.length - o.value.length;
+                        if (t > 0) {
+                            var caret = o.caret + t;
                         } else {
-                            var v = ' ';
+                            var caret = o.caret;
                         }
-                    } else {
-                        var v = pieces[index];
-                    }
-                    values[index] = v;
-                    if (input == v) {
-                        index++;
-                        return true;
+                        Value.call(o.input, newValue, caret, adjustNumeric);
                     }
                 }
             }
 
-            index++;
-        } while (pieces[index]);
+            // Update raw data
+            if (o.input) {
+                var label = null;
+                if (isNumeric(o.type)) {
+                    // Extract the number
+                    o.number = Extract.call(o, Value.call(o.input));
+                    // Keep the raw data as a property of the tag
+                    if (o.type == 'percentage') {
+                        label = o.number / 100;
+                    } else {
+                        label = o.number;
+                    }
+                } else if (o.type == 'datetime') {
+                    label = getDate.call(o);
+
+                    if (o.date[0] && o.date[1] && o.date[2]) {
+                        o.input.setAttribute('data-completed', true);
+                    }
+                }
+
+                if (label) {
+                    o.input.setAttribute('data-value', label);
+                }
+            }
+
+            if (newValue !== undefined) {
+                if (returnObject) {
+                    return o;
+                } else {
+                    return newValue;
+                }
+            }
+        }
+    }
+
+    // Extract the tokens from a mask
+    obj.prepare = function(str, o) {
+        if (! o) {
+            o = {};
+        }
+        return getTokens.call(o, str);
     }
 
     /**
-     * Create tokens for the mask
+     * Apply the mask to a element (legacy)
      */
-    obj.prepare = function(mask) {
-        pieces = [];
-        for (var i = 0; i < mask.length; i++) {
-            if (mask[i].match(/[0-9]|[a-z]|\\/g)) {
-                if (mask[i] == 'y' && mask[i+1] == 'y' && mask[i+2] == 'y' && mask[i+3] == 'y') {
-                    pieces.push('yyyy');
-                    i += 3;
-                } else if (mask[i] == 'y' && mask[i+1] == 'y') {
-                    pieces.push('yy');
-                    i++;
-                } else if (mask[i] == 'm' && mask[i+1] == 'm' && mask[i+2] == 'm' && mask[i+3] == 'm') {
-                    pieces.push('mmmm');
-                    i += 3;
-                } else if (mask[i] == 'm' && mask[i+1] == 'm' && mask[i+2] == 'm') {
-                    pieces.push('mmm');
-                    i += 2;
-                } else if (mask[i] == 'm' && mask[i+1] == 'm') {
-                    pieces.push('mm');
-                    i++;
-                } else if (mask[i] == 'd' && mask[i+1] == 'd') {
-                    pieces.push('dd');
-                    i++;
-                } else if (mask[i] == 'h' && mask[i+1] == 'h' && mask[i+2] == '2' && mask[i+3] == '4') {
-                    pieces.push('hh24');
-                    i += 3;
-                } else if (mask[i] == 'h' && mask[i+1] == 'h') {
-                    pieces.push('hh');
-                    i++;
-                } else if (mask[i] == 'm' && mask[i+1] == 'i') {
-                    pieces.push('mi');
-                    i++;
-                } else if (mask[i] == 's' && mask[i+1] == 's') {
-                    pieces.push('ss');
-                    i++;
-                } else if (mask[i] == 'a' && mask[i+1] == 'm') {
-                    pieces.push('am');
-                    i++;
-                } else if (mask[i] == 'p' && mask[i+1] == 'm') {
-                    pieces.push('pm');
-                    i++;
-                } else if (mask[i] == '\\' && mask[i+1] == '0') {
-                    pieces.push('\\0');
-                    i++;
-                } else if (mask[i] == '\\' && mask[i+1] == 'a') {
-                    pieces.push('\\a');
-                    i++;
+    obj.apply = function(e) {
+        var v = Value.call(e.target);
+        if (e.key.length == 1) {
+            v += e.key;
+        }
+        Value.call(e.target, obj(v, e.target.getAttribute('data-mask')));
+    }
+
+    /**
+     * Legacy support
+     */
+    obj.run = function(value, mask, decimal) {
+        return obj(value, { mask, decimal });
+    }
+
+    /**
+     * Extract number from masked string
+     */
+    obj.extract = function(v, options, returnObject) {
+        if (isBlank(v)) {
+            return v;
+        }
+        if (typeof(options) != 'object') {
+            return value;
+        } else {
+            if (! options.options) {
+                options.options = {};
+            }
+        }
+
+        // Compatibility
+        if (! options.mask && options.format) {
+            options.mask = options.format;
+        }
+
+        // Get decimal
+        getDecimal.call(options, options.mask);
+
+        var type = null;
+        if (options.type == 'percent' || options.options.style == 'percent') {
+            type = 'percentage';
+        } else if (options.mask) {
+            type = getType.call(options, options.mask);
+        }
+
+
+        if (type === 'datetime') {
+            if (v instanceof Date) {
+                var t = jSuites.calendar.getDateString(value, options.mask);
+            }
+
+            var o = obj(v, options, true);
+            var value = getDate.call(o);
+            if ((o.date[0] && o.date[1] && o.date[2]) && ! (o.date[3] || o.date[4] || o.date[5])) {
+                var t = jSuites.calendar.now(o.date);
+                value = jSuites.calendar.dateToNum(t);
+            }
+        } else {
+            var value = Extract.call(options, v);
+            // Percentage
+            if (type == 'percentage') {
+                value /= 100;
+            }
+            var o = options;
+        }
+
+        o.value = value;
+
+        if (returnObject) {
+            return o;
+        } else {
+            return value;
+        }
+    }
+
+    /**
+     * Render
+     */
+    obj.render = function(value, options, fullMask) {
+        if (isBlank(value)) {
+            return value;
+        }
+
+        if (typeof(options) != 'object') {
+            return value;
+        } else {
+            if (! options.options) {
+                options.options = {};
+            }
+        }
+
+        // Compatibility
+        if (! options.mask && options.format) {
+            options.mask = options.format;
+        }
+
+        var type = null;
+        if (options.type == 'percent' || options.options.style == 'percent') {
+            type = 'percentage';
+        } else if (options.mask) {
+            type = getType.call(options, options.mask);
+        } else if (value instanceof Date) {
+            type = 'datetime';
+        }
+
+        // Fill with blanks
+        var fillWithBlanks = false;
+
+        if (type =='datetime' || options.type == 'calendar') {
+            var t = jSuites.calendar.getDateString(value, options.mask);
+            if (t) {
+                value = t;
+            }
+
+            if (options.mask && fullMask) {
+                fillWithBlanks = true;
+            }
+        } else {
+            // Percentage
+            if (type == 'percentage') {
+                value *= 100;
+            }
+            // Number of decimal places
+            if (typeof(value) === 'number') {
+                var t = null;
+                if (options.mask && fullMask) {
+                    var e = new RegExp('0{1}(.{1})0+', 'ig');
+                    var d = options.mask.match(e);
+                    if (d && d[0]) {
+                        d = d[0].length - 2;
+                        t = value.toFixed(d);
+                    } else {
+                        t = (''+value);
+                    }
+                } else if (options.locale && fullMask) {
+                    var d = (''+value).split('.');
+                    if (! d[1]) {
+                        d[1] = '00';
+                    } else {
+                        if (d[1].length == 1) {
+                            d[1] += '0';
+                        }
+                    }
+                    t = d.join('.');
                 } else {
-                    pieces.push(mask[i]);
+                    t = toPlainString(value);
+                }
+
+                if (t !== null) {
+                    value = t;
+                    // Get decimal
+                    getDecimal.call(options, options.mask);
+                    // Replace to the correct decimal
+                    if (options.options.decimal) {
+                        value = value.replace('.', options.options.decimal);
+                    }
                 }
             } else {
-                if (mask[i] == '#' && mask[i+1] == '.' && mask[i+2] == '#' && mask[i+3] == '#') {
-                    pieces.push('#.##');
-                    i += 3;
-                } else if (mask[i] == '#' && mask[i+1] == ',' && mask[i+2] == '#' && mask[i+3] == '#') {
-                    pieces.push('#,##');
-                    i += 3;
-                } else if (mask[i] == '#' && mask[i+1] == ' ' && mask[i+2] == '#' && mask[i+3] == '#') {
-                    pieces.push('# ##');
-                    i += 3;
-                } else if (mask[i] == '#' && mask[i+1] == "'" && mask[i+2] == '#' && mask[i+3] == '#') {
-                    pieces.push("#'##");
-                    i += 3;
-                } else if (mask[i] == '[' && mask[i+1] == '-' && mask[i+2] == ']') {
-                    pieces.push('[-]');
-                    i += 2;
-                } else {
-                    pieces.push(mask[i]);
+                if (options.mask && fullMask) {
+                    fillWithBlanks = true;
                 }
             }
+        }
+
+        if (fillWithBlanks) {
+            var s = options.mask.length - value.length;
+            if (s > 0) {
+                for (var i = 0; i < s; i++) {
+                    value += ' ';
+                }
+            }
+        }
+
+        value = obj(value, options);
+
+        return value;
+    }
+
+    obj.set = function(e, m) {
+        if (m) {
+            e.setAttribute('data-mask', m);
+            // Reset the value
+            var event = new Event('input', {
+                bubbles: true,
+                cancelable: true,
+            });
+            e.dispatchEvent(event);
         }
     }
 
     if (typeof document !== 'undefined') {
-        document.addEventListener('paste', obj.paste);
-        document.addEventListener('keydown', obj.apply);
+        document.addEventListener('input', function(e) {
+            if (e.target.getAttribute('data-mask') || e.target.mask) {
+                obj(e);
+            }
+        });
     }
 
     return obj;
 })();
+
+jSuites.modal = (function(el, options) {
+    var obj = {};
+    obj.options = {};
+
+    // Default configuration
+    var defaults = {
+        url: null,
+        onopen: null,
+        onclose: null,
+        closed: false,
+        width: null,
+        height: null,
+        title: null,
+        padding: null,
+    };
+
+    // Loop through our object
+    for (var property in defaults) {
+        if (options && options.hasOwnProperty(property)) {
+            obj.options[property] = options[property];
+        } else {
+            obj.options[property] = defaults[property];
+        }
+    }
+
+    // Title
+    if (! obj.options.title && el.getAttribute('title')) {
+        obj.options.title = el.getAttribute('title');
+    }
+
+    var temp = document.createElement('div');
+    while (el.children[0]) {
+        temp.appendChild(el.children[0]);
+    }
+
+    obj.content = document.createElement('div');
+    obj.content.className = 'jmodal_content';
+    obj.content.innerHTML = el.innerHTML;
+
+    while (temp.children[0]) {
+        obj.content.appendChild(temp.children[0]);
+    }
+
+    obj.container = document.createElement('div');
+    obj.container.className = 'jmodal';
+    obj.container.appendChild(obj.content);
+
+    if (obj.options.padding) {
+        obj.content.style.padding = obj.options.padding;
+    }
+    if (obj.options.width) {
+        obj.container.style.width = obj.options.width;
+    }
+    if (obj.options.height) {
+        obj.container.style.height = obj.options.height;
+    }
+    if (obj.options.title) {
+        obj.container.setAttribute('title', obj.options.title);
+    } else {
+        obj.container.classList.add('no-title');
+    }
+    el.innerHTML = '';
+    el.style.display = 'none';
+    el.appendChild(obj.container);
+
+    // Backdrop
+    var backdrop = document.createElement('div');
+    backdrop.className = 'jmodal_backdrop';
+    backdrop.onclick = function() {
+        obj.close();
+    }
+    el.appendChild(backdrop);
+
+    obj.open = function() {
+        el.style.display = 'block';
+        // Fullscreen
+        var rect = obj.container.getBoundingClientRect();
+        if (jSuites.getWindowWidth() < rect.width) {
+            obj.container.style.top = '';
+            obj.container.style.left = '';
+            obj.container.classList.add('jmodal_fullscreen');
+            jSuites.animation.slideBottom(obj.container, 1);
+        } else {
+            backdrop.style.display = 'block';
+        }
+        // Current
+        jSuites.modal.current = obj;
+        // Event
+        if (typeof(obj.options.onopen) == 'function') {
+            obj.options.onopen(el, obj);
+        }
+    }
+
+    obj.resetPosition = function() {
+        obj.container.style.top = '';
+        obj.container.style.left = '';
+    }
+
+    obj.isOpen = function() {
+        return el.style.display != 'none' ? true : false;
+    }
+
+    obj.close = function() {
+        el.style.display = 'none';
+        // Backdrop
+        backdrop.style.display = '';
+        // Current
+        jSuites.modal.current = null;
+        // Remove fullscreen class
+        obj.container.classList.remove('jmodal_fullscreen');
+        // Event
+        if (typeof(obj.options.onclose) == 'function') {
+            obj.options.onclose(el, obj);
+        }
+    }
+
+    if (! jSuites.modal.hasEvents) {
+        jSuites.modal.current = obj;
+
+        if ('ontouchstart' in document.documentElement === true) {
+            document.addEventListener("touchstart", jSuites.modal.mouseDownControls);
+        } else {
+            document.addEventListener('mousedown', jSuites.modal.mouseDownControls);
+            document.addEventListener('mousemove', jSuites.modal.mouseMoveControls);
+            document.addEventListener('mouseup', jSuites.modal.mouseUpControls);
+        }
+
+        document.addEventListener('keydown', jSuites.modal.keyDownControls);
+
+        jSuites.modal.hasEvents = true;
+    }
+
+    if (obj.options.url) {
+        jSuites.ajax({
+            url: obj.options.url,
+            method: 'GET',
+            dataType: 'text/html',
+            success: function(data) {
+                obj.content.innerHTML = data;
+
+                if (! obj.options.closed) {
+                    obj.open();
+                }
+            }
+        });
+    } else {
+        if (! obj.options.closed) {
+            obj.open();
+        }
+    }
+
+    // Keep object available from the node
+    el.modal = obj;
+
+    return obj;
+});
+
+jSuites.modal.current = null;
+jSuites.modal.position = null;
+
+jSuites.modal.keyDownControls = function(e) {
+    if (e.which == 27) {
+        if (jSuites.modal.current) {
+            jSuites.modal.current.close();
+        }
+    }
+}
+
+jSuites.modal.mouseUpControls = function(e) {
+    if (jSuites.modal.current) {
+        jSuites.modal.current.container.style.cursor = 'auto';
+    }
+    jSuites.modal.position = null;
+}
+
+jSuites.modal.mouseMoveControls = function(e) {
+    if (jSuites.modal.current && jSuites.modal.position) {
+        if (e.which == 1 || e.which == 3) {
+            var position = jSuites.modal.position;
+            jSuites.modal.current.container.style.top = (position[1] + (e.clientY - position[3]) + (position[5] / 2)) + 'px';
+            jSuites.modal.current.container.style.left = (position[0] + (e.clientX - position[2]) + (position[4] / 2)) + 'px';
+            jSuites.modal.current.container.style.cursor = 'move';
+        } else {
+            jSuites.modal.current.container.style.cursor = 'auto';
+        }
+    }
+}
+
+jSuites.modal.mouseDownControls = function(e) {
+    jSuites.modal.position = [];
+
+    if (e.target.classList.contains('jmodal')) {
+        setTimeout(function() {
+            // Get target info
+            var rect = e.target.getBoundingClientRect();
+
+            if (e.changedTouches && e.changedTouches[0]) {
+                var x = e.changedTouches[0].clientX;
+                var y = e.changedTouches[0].clientY;
+            } else {
+                var x = e.clientX;
+                var y = e.clientY;
+            }
+
+            if (rect.width - (x - rect.left) < 50 && (y - rect.top) < 50) {
+                setTimeout(function() {
+                    jSuites.modal.current.close();
+                }, 100);
+            } else {
+                if (e.target.getAttribute('title') && (y - rect.top) < 50) {
+                    if (document.selection) {
+                        document.selection.empty();
+                    } else if ( window.getSelection ) {
+                        window.getSelection().removeAllRanges();
+                    }
+
+                    jSuites.modal.position = [
+                        rect.left,
+                        rect.top,
+                        e.clientX,
+                        e.clientY,
+                        rect.width,
+                        rect.height,
+                    ];
+                }
+            }
+        }, 100);
+    }
+}
 
 
 jSuites.notification = (function(options) {
@@ -7195,36 +8926,32 @@ jSuites.picker = (function(el, options) {
         // Class
         el.classList.add('jpicker');
         el.setAttribute('tabindex', '900');
+        el.onmousedown = function(e) {
+            if (! el.classList.contains('jpicker-focus')) {
+                obj.open();
+            }
+        }
 
         // Dropdown Header
         dropdownHeader = document.createElement('div');
         dropdownHeader.classList.add('jpicker-header');
-        el.onmousedown = function(e) {
-            var element = jSuites.findElement(e.target, 'jpicker');
-            if (element) {
-                if (! el.classList.contains('jpicker-focus')) {
-                    obj.open();
-                } else {
-                    var item = jSuites.findElement(e.target, 'jpicker-item');
-                    if (item) {
-                        console.log(item)
-                        // Update label
-                        obj.setValue(item.k);
-                        // Call method
-                        if (typeof(obj.options.onchange) == 'function') {
-                            obj.options.onchange.call(obj, el, obj, item.v, item.v, item.k);
-                        }
-                    }
-                }
-            } else {
-                obj.close();
-            }
-            e.stopPropagation();
-        }
 
         // Dropdown content
         dropdownContent = document.createElement('div');
         dropdownContent.classList.add('jpicker-content');
+        dropdownContent.onclick = function(e) {
+            var item = jSuites.findElement(e.target, 'jpicker-item');
+            if (item) {
+                if (item.parentNode === dropdownContent) {
+                    // Update label
+                    obj.setValue(item.k);
+                    // Call method
+                    if (typeof(obj.options.onchange) == 'function') {
+                        obj.options.onchange.call(obj, el, obj, item.v, item.v, item.k);
+                    }
+                }
+            }
+        }
 
         // Append content and header
         el.appendChild(dropdownHeader);
@@ -7257,6 +8984,121 @@ jSuites.picker = (function(el, options) {
     }
 
     init();
+
+    return obj;
+});
+
+jSuites.progressbar = (function(el, options) {
+    var obj = {};
+    obj.options = {};
+
+    // Default configuration
+    var defaults = {
+        value: 0,
+        onchange: null,
+        width: null,
+    };
+
+    // Loop through the initial configuration
+    for (var property in defaults) {
+        if (options && options.hasOwnProperty(property)) {
+            obj.options[property] = options[property];
+        } else {
+            obj.options[property] = defaults[property];
+        }
+    }
+
+    // Class
+    el.classList.add('jprogressbar');
+    el.setAttribute('tabindex', 1);
+    el.setAttribute('data-value', obj.options.value);
+
+    var bar = document.createElement('div');
+    bar.style.width = obj.options.value + '%';
+    bar.style.color = '#fff';
+    el.appendChild(bar);
+
+    if (obj.options.width) {
+        el.style.width = obj.options.width;
+    }
+
+    // Set value
+    obj.setValue = function(value) {
+        value = parseInt(value);
+        obj.options.value = value;
+        bar.style.width = value + '%';
+        el.setAttribute('data-value', value + '%');
+
+        if (value < 6) {
+            el.style.color = '#000';
+        } else {
+            el.style.color = '#fff';
+        }
+
+        // Update value
+        obj.options.value = value;
+
+        if (typeof(obj.options.onchange) == 'function') {
+            obj.options.onchange(el, value);
+        }
+
+        // Lemonade JS
+        if (el.value != obj.options.value) {
+            el.value = obj.options.value;
+            if (typeof(el.onchange) == 'function') {
+                el.onchange({
+                    type: 'change',
+                    target: el,
+                    value: el.value
+                });
+            }
+        }
+    }
+
+    obj.getValue = function() {
+        return obj.options.value;
+    }
+
+    var action = function(e) {
+        if (e.which) {
+            // Get target info
+            var rect = el.getBoundingClientRect();
+
+            if (e.changedTouches && e.changedTouches[0]) {
+                var x = e.changedTouches[0].clientX;
+                var y = e.changedTouches[0].clientY;
+            } else {
+                var x = e.clientX;
+                var y = e.clientY;
+            }
+
+            obj.setValue(Math.round((x - rect.left) / rect.width * 100));
+        }
+    }
+
+    // Events
+    if ('touchstart' in document.documentElement === true) {
+        el.addEventListener('touchstart', action);
+        el.addEventListener('touchend', action);
+    } else {
+        el.addEventListener('mousedown', action);
+        el.addEventListener("mousemove", action);
+    }
+
+    // Change
+    el.change = obj.setValue;
+
+    // Global generic value handler
+    el.val = function(val) {
+        if (val === undefined) {
+            return obj.getValue();
+        } else {
+            obj.setValue(val);
+        }
+    }
+
+    // Reference
+    el.progressbar = obj;
 
     return obj;
 });
@@ -7405,6 +9247,477 @@ jSuites.rating = (function(el, options) {
     return obj;
 });
 
+
+jSuites.search = (function(el, options) {
+    if (el.search) {
+        return el.search;
+    }
+
+    var index =  null;
+
+    var select = function(e) {
+        if (e.target.classList.contains('jsearch_item')) {
+            var element = e.target;
+        } else {
+            var element = e.target.parentNode;
+        }
+
+        obj.selectIndex(element);
+        e.preventDefault();
+    }
+
+    var createList = function(data) {
+        // Reset container
+        container.innerHTML = '';
+        // Print results
+        if (! data.length) {
+            // Show container
+            el.style.display = '';
+        } else {
+            // Show container
+            el.style.display = 'block';
+
+            // Show items (only 10)
+            var len = data.length < 11 ? data.length : 10;
+            for (var i = 0; i < len; i++) {
+                if (typeof(data[i]) == 'string') {
+                    var text = data[i];
+                    var value = data[i];
+                } else {
+                    // Legacy
+                    var text = data[i].text;
+                    if (! text && data[i].name) {
+                        text = data[i].name;
+                    }
+                    var value = data[i].value;
+                    if (! value && data[i].id) {
+                        value = data[i].id;
+                    }
+                }
+
+                var div = document.createElement('div');
+                div.setAttribute('data-value', value);
+                div.setAttribute('data-text', text);
+                div.className = 'jsearch_item';
+
+                if (data[i].id) {
+                    div.setAttribute('id', data[i].id)
+                }
+
+                if (obj.options.forceSelect && i == 0) {
+                    div.classList.add('selected');
+                }
+                var img = document.createElement('img');
+                if (data[i].image) {
+                    img.src = data[i].image;
+                } else {
+                    img.style.display = 'none';
+                }
+                div.appendChild(img);
+
+                var item = document.createElement('div');
+                item.innerHTML = text;
+                div.appendChild(item);
+
+                // Append item to the container
+                container.appendChild(div);
+            }
+        }
+    }
+
+    var execute = function(str) {
+        if (str != obj.terms) {
+            // New terms
+            obj.terms = str;
+            // New index
+            if (obj.options.forceSelect) {
+                index = 0;
+            } else {
+                index = null;
+            }
+            // Array or remote search
+            if (Array.isArray(obj.options.data)) {
+                var test = function(o) {
+                    if (typeof(o) == 'string') {
+                        if ((''+o).toLowerCase().search(str.toLowerCase()) >= 0) {
+                            return true;
+                        }
+                    } else {
+                        for (var key in o) {
+                            var value = o[key];
+                            if ((''+value).toLowerCase().search(str.toLowerCase()) >= 0) {
+                                return true;
+                            }
+                        }
+                    }
+                    return false;
+                }
+
+                var results = obj.options.data.filter(function(item) {
+                    return test(item);
+                });
+
+                // Show items
+                createList(results);
+            } else {
+                // Get remove results
+                jSuites.ajax({
+                    url: obj.options.data + str,
+                    method: 'GET',
+                    dataType: 'json',
+                    success: function(data) {
+                        // Show items
+                        createList(data);
+                    }
+                });
+            }
+        }
+    }
+
+    // Search timer
+    var timer = null;
+
+    // Search methods
+    var obj = function(str) {
+        if (timer) {
+            clearTimeout(timer);
+        }
+        timer = setTimeout(function() {
+            execute(str);
+        }, 500);
+    }
+    if(options.forceSelect === null) {
+        options.forceSelect = true;
+    }
+    obj.options = {
+        data: options.data || null,
+        input: options.input || null,
+        onselect: options.onselect || null,
+        forceSelect: options.forceSelect,
+    };
+
+    obj.selectIndex = function(item) {
+        var id = item.getAttribute('id');
+        var text = item.getAttribute('data-text');
+        var value = item.getAttribute('data-value');
+        // Onselect
+        if (typeof(obj.options.onselect) == 'function') {
+            obj.options.onselect(obj, text, value, id);
+        }
+        // Close container
+        obj.close();
+    }
+
+    obj.open = function() {
+        el.style.display = 'block';
+    }
+
+    obj.close = function() {
+        if (timer) {
+            clearTimeout(timer);
+        }
+        // Current terms
+        obj.terms = '';
+        // Remove results
+        container.innerHTML = '';
+        // Hide
+        el.style.display = '';
+    }
+
+    obj.isOpened = function() {
+        return el.style.display ? true : false;
+    }
+
+    obj.keydown = function(e) {
+        if (obj.isOpened()) {
+            if (e.key == 'Enter') {
+                // Enter
+                if (index!==null && container.children[index]) {
+                    obj.selectIndex(container.children[index]);
+                    e.preventDefault();
+                } else {
+                    obj.close();
+                }
+            } else if (e.key === 'ArrowUp') {
+                // Up
+                if (index!==null && container.children[0]) {
+                    container.children[index].classList.remove('selected');
+                    if(!obj.options.forceSelect && index === 0) {
+                        index = null;
+                    } else {
+                        index = Math.max(0, index-1);
+                        container.children[index].classList.add('selected');
+                    }
+                }
+                e.preventDefault();
+            } else if (e.key === 'ArrowDown') {
+                // Down
+                if(index == null) {
+                    index = -1;
+                } else {
+                    container.children[index].classList.remove('selected');
+                }
+                if (index < 9 && container.children[index+1]) {
+                    index++;
+                }
+                container.children[index].classList.add('selected');
+                e.preventDefault();
+            }
+        }
+    }
+
+    obj.keyup = function(e) {
+        if (obj.options.input) {
+            obj(obj.options.input.value);
+        } else {
+            // Current node
+            var node = jSuites.getNode();
+            if (node) {
+                obj(node.innerText);
+            }
+        }
+    }
+    
+    // Add events
+    if (obj.options.input) {
+        obj.options.input.addEventListener("keyup", obj.keyup);
+        obj.options.input.addEventListener("keydown", obj.keydown);
+    }
+
+    // Append element
+    var container = document.createElement('div');
+    container.classList.add('jsearch_container');
+    container.onmousedown = select;
+    el.appendChild(container);
+
+    el.classList.add('jsearch');
+    el.search = obj;
+
+    return obj;
+});
+
+
+jSuites.slider = (function(el, options) {
+    var obj = {};
+    obj.options = {};
+    obj.currentImage = null;
+
+    if (options) {
+        obj.options = options;
+    }
+
+    // Focus
+    el.setAttribute('tabindex', '900')
+
+    // Items
+    obj.options.items = [];
+
+    if (! el.classList.contains('jslider')) {
+        el.classList.add('jslider');
+        el.classList.add('unselectable');
+
+        if (obj.options.height) {
+            el.style.minHeight = obj.options.height;
+        }
+        if (obj.options.width) {
+            el.style.width = obj.options.width;
+        }
+        if (obj.options.grid) {
+            el.classList.add('jslider-grid');
+            var number = el.children.length;
+            if (number > 4) {
+                el.setAttribute('data-total', number - 4);
+            }
+            el.setAttribute('data-number', (number > 4 ? 4 : number));
+        }
+
+        // Add slider counter
+        var counter = document.createElement('div');
+        counter.classList.add('jslider-counter');
+
+        // Move children inside
+        if (el.children.length > 0) {
+            // Keep children items
+            for (var i = 0; i < el.children.length; i++) {
+                obj.options.items.push(el.children[i]);
+                
+                // counter click event
+                var item = document.createElement('div');
+                item.onclick = function() {
+                    var index = Array.prototype.slice.call(counter.children).indexOf(this);
+                    obj.show(obj.currentImage = obj.options.items[index]);
+                }
+                counter.appendChild(item);
+            }
+        }
+        // Add caption
+        var caption = document.createElement('div');
+        caption.className = 'jslider-caption';
+
+        // Add close buttom
+        var controls = document.createElement('div');
+        var close = document.createElement('div');
+        close.className = 'jslider-close';
+        close.innerHTML = '';
+        
+        close.onclick = function() {
+            obj.close();
+        }
+        controls.appendChild(caption);
+        controls.appendChild(close);
+    }
+
+    obj.updateCounter = function(index) {
+        for (var i = 0; i < counter.children.length; i ++) {
+            if (counter.children[i].classList.contains('jslider-counter-focus')) {
+                counter.children[i].classList.remove('jslider-counter-focus');
+                break;
+            }
+        }
+        counter.children[index].classList.add('jslider-counter-focus');
+    }
+
+    obj.show = function(target) {
+        if (! target) {
+            var target = el.children[0];
+        }
+
+        // Focus element
+        el.classList.add('jslider-focus');
+        el.classList.remove('jslider-grid');
+        el.appendChild(controls);
+        el.appendChild(counter);
+
+        // Update counter
+        var index = obj.options.items.indexOf(target);
+        obj.updateCounter(index);
+
+        // Remove display
+        for (var i = 0; i < el.children.length; i++) {
+            el.children[i].style.display = '';
+        }
+        target.style.display = 'block';
+
+        // Is there any previous
+        if (target.previousElementSibling) {
+            el.classList.add('jslider-left');
+        } else {
+            el.classList.remove('jslider-left');
+        }
+
+        // Is there any next
+        if (target.nextElementSibling && target.nextElementSibling.tagName == 'IMG') {
+            el.classList.add('jslider-right');
+        } else {
+            el.classList.remove('jslider-right');
+        }
+
+        obj.currentImage = target;
+
+        // Vertical image
+        if (obj.currentImage.offsetHeight > obj.currentImage.offsetWidth) {
+            obj.currentImage.classList.add('jslider-vertical');
+        }
+
+        controls.children[0].innerText = obj.currentImage.getAttribute('title');
+    }
+
+    obj.open = function() {
+        obj.show();
+
+        // Event
+        if (typeof(obj.options.onopen) == 'function') {
+            obj.options.onopen(el);
+        }
+    }
+
+    obj.close = function() {
+        // Remove control classes
+        el.classList.remove('jslider-focus');
+        el.classList.remove('jslider-left');
+        el.classList.remove('jslider-right');
+        // Show as a grid depending on the configuration
+        if (obj.options.grid) {
+            el.classList.add('jslider-grid');
+        }
+        // Remove display
+        for (var i = 0; i < el.children.length; i++) {
+            el.children[i].style.display = '';
+        }
+        // Remove controls from the component
+        counter.remove();
+        controls.remove();
+        // Current image
+        obj.currentImage = null;
+        // Event
+        if (typeof(obj.options.onclose) == 'function') {
+            obj.options.onclose(el);
+        }
+    }
+
+    obj.reset = function() {
+        el.innerHTML = '';
+    }
+
+    obj.next = function() {
+        var nextImage = obj.currentImage.nextElementSibling;
+        if (nextImage && nextImage.tagName === 'IMG') {
+            obj.show(obj.currentImage.nextElementSibling);
+        }
+    }
+    
+    obj.prev = function() {
+        if (obj.currentImage.previousElementSibling) {
+            obj.show(obj.currentImage.previousElementSibling);
+        }
+    }
+
+    var mouseUp = function(e) {
+        // Open slider
+        if (e.target.tagName == 'IMG') {
+            obj.show(e.target);
+        } else if (! e.target.classList.contains('jslider-close') && ! (e.target.parentNode.classList.contains('jslider-counter') || e.target.classList.contains('jslider-counter'))){
+            // Arrow controls
+            var offsetX = e.offsetX || e.changedTouches[0].clientX;
+            if (e.target.clientWidth - offsetX < 40) {
+                // Show next image
+                obj.next();
+            } else if (offsetX < 40) {
+                // Show previous image
+                obj.prev();
+            }
+        }
+    }
+
+    if ('ontouchend' in document.documentElement === true) {
+        el.addEventListener('touchend', mouseUp);
+    } else {
+        el.addEventListener('mouseup', mouseUp);
+    }
+
+    // Add global events
+    el.addEventListener("swipeleft", function(e) {
+        obj.next();
+        e.preventDefault();
+        e.stopPropagation();
+    });
+
+    el.addEventListener("swiperight", function(e) {
+        obj.prev();
+        e.preventDefault();
+        e.stopPropagation();
+    });
+
+    el.addEventListener('keydown', function(e) {
+        if (e.which == 27) {
+            obj.close();
+        }
+    });
+
+    el.slider = obj;
+
+    return obj;
+});
 
 jSuites.sorting = (function(el, options) {
     var obj = {};
@@ -7565,6 +9878,7 @@ jSuites.tabs = (function(el, options) {
         hideHeaders: false,
         padding: null,
         palette: null,
+        maxWidth: null,
     }
 
     // Loop through the initial configuration
@@ -7756,7 +10070,7 @@ jSuites.tabs = (function(el, options) {
         }
     }
 
-    obj.appendElement = function(title) {
+    obj.appendElement = function(title, cb) {
         if (! title) {
             var title = prompt('Title?', '');
         }
@@ -7778,6 +10092,11 @@ jSuites.tabs = (function(el, options) {
             }
             // Open new tab
             obj.selectIndex(h);
+
+            // Callback
+            if (typeof(cb) == 'function') {
+                cb(div, h);
+            }
 
             // Return element
             return div;
@@ -7861,6 +10180,9 @@ jSuites.tabs = (function(el, options) {
         var header = document.createElement('div');
         header.className = 'jtabs-headers-container';
         header.appendChild(obj.headers);
+        if (obj.options.maxWidth) {
+            header.style.maxWidth = parseInt(obj.options.maxWidth) + 'px';
+        }
 
         // Controls
         var controls = document.createElement('div');
@@ -8045,8 +10367,676 @@ jSuites.tabs = (function(el, options) {
     return obj;
 });
 
+jSuites.tags = (function(el, options) {
+    // Redefine configuration
+    if (el.tags) {
+        return el.tags.setOptions(options, true);
+    }
+
+    var obj = { type:'tags' };
+    obj.options = {};
+
+    // Limit
+    var limit = function() {
+        return obj.options.limit && el.children.length >= obj.options.limit ? true : false;
+    }
+
+    // Search helpers
+    var search = null;
+    var searchContainer = null;
+
+    obj.setOptions = function(options, reset) {
+        /**
+         * @typedef {Object} defaults
+         * @property {(string|Array)} value - Initial value of the compontent
+         * @property {number} limit - Max number of tags inside the element
+         * @property {string} search - The URL for suggestions
+         * @property {string} placeholder - The default instruction text on the element
+         * @property {validation} validation - Method to validate the tags
+         * @property {requestCallback} onbeforechange - Method to be execute before any changes on the element
+         * @property {requestCallback} onchange - Method to be execute after any changes on the element
+         * @property {requestCallback} onfocus - Method to be execute when on focus
+         * @property {requestCallback} onblur - Method to be execute when on blur
+         * @property {requestCallback} onload - Method to be execute when the element is loaded
+         */
+        var defaults = {
+            value: '',
+            limit: null,
+            limitMessage: null,
+            search: null,
+            placeholder: null,
+            validation: null,
+            onbeforechange: null,
+            onlimit: null,
+            onchange: null,
+            onfocus: null,
+            onblur: null,
+            onload: null,
+            colors: null,
+        }
+
+        // Loop through though the default configuration
+        for (var property in defaults) {
+            if (options && options.hasOwnProperty(property)) {
+                obj.options[property] = options[property];
+            } else {
+                if (typeof(obj.options[property]) == 'undefined' || reset === true) {
+                    obj.options[property] = defaults[property];
+                }
+            }
+        }
+
+        // Placeholder
+        if (obj.options.placeholder) {
+            el.setAttribute('data-placeholder', obj.options.placeholder);
+        } else {
+            el.removeAttribute('data-placeholder');
+        }
+        el.placeholder = obj.options.placeholder;
+
+        // Update value
+        obj.setValue(obj.options.value);
+
+        // Validate items
+        filter();
+
+        // Create search box
+        if (obj.options.search) {
+            if (! searchContainer) {
+                searchContainer = document.createElement('div');
+                el.parentNode.insertBefore(searchContainer, el.nextSibling);
+
+                // Create container
+                search = jSuites.search(searchContainer, {
+                    data: obj.options.search,
+                    onselect: function(a,b,c) {
+                        obj.selectIndex(b,c);
+                    }
+                });
+            }
+        } else {
+            if (searchContainer) {
+                search = null;
+                searchContainer.remove();
+                searchContainer = null;
+            }
+        }
+
+        return obj;
+    }
+
+    /**
+     * Add a new tag to the element
+     * @param {(?string|Array)} value - The value of the new element
+     */
+    obj.add = function(value, focus) {
+        if (typeof(obj.options.onbeforechange) == 'function') {
+            var ret = obj.options.onbeforechange(el, obj, obj.options.value, value);
+            if (ret === false) {
+                return false;
+            } else { 
+                if (ret != null) {
+                    value = ret;
+                }
+            }
+        }
+
+        // Make sure search is closed
+        if (search) {
+            search.close();
+        }
+
+        if (limit()) {
+            if (typeof(obj.options.onlimit) == 'function') {
+                obj.options.onlimit(obj, obj.options.limit);
+            } else if (obj.options.limitMessage) {
+                alert(obj.options.limitMessage + ' ' + obj.options.limit);
+            }
+        } else {
+            // Get node
+            var node = jSuites.getNode();
+
+            if (node && node.parentNode && node.parentNode.classList.contains('jtags') &&
+                node.nextSibling && (! (node.nextSibling.innerText && node.nextSibling.innerText.trim()))) {
+                div = node.nextSibling;
+            } else {
+                // Remove not used last item
+                if (el.lastChild) {
+                    if (! el.lastChild.innerText.trim()) {
+                        el.removeChild(el.lastChild);
+                    }
+                }
+
+                // Mix argument string or array
+                if (! value || typeof(value) == 'string') {
+                    var div = createElement(value, value, node);
+                } else {
+                    for (var i = 0; i <= value.length; i++) {
+                        if (! limit()) {
+                            if (! value[i] || typeof(value[i]) == 'string') {
+                                var t = value[i] || '';
+                                var v = null;
+                            } else {
+                                var t = value[i].text;
+                                var v = value[i].value;
+                            }
+
+                            // Add element
+                            var div = createElement(t, v);
+                        }
+                    }
+                }
+
+                // Change
+                change();
+            }
+
+            // Place caret
+            if (focus) {
+                setFocus(div);
+            }
+        }
+    }
+
+    obj.setLimit = function(limit) {
+        obj.options.limit = limit;
+        var n = el.children.length - limit;
+        while (el.children.length > limit) {
+            el.removeChild(el.lastChild);
+        }
+    }
+
+    // Remove a item node
+    obj.remove = function(node) {
+        // Remove node
+        node.parentNode.removeChild(node);
+        // Make sure element is not blank
+        if (! el.children.length) {
+            obj.add('', true);
+        } else {
+            change();
+        }
+    }
+
+    /**
+     * Get all tags in the element
+     * @return {Array} data - All tags as an array
+     */
+    obj.getData = function() {
+        var data = [];
+        for (var i = 0; i < el.children.length; i++) {
+            // Get value
+            var text = el.children[i].innerText.replace("\n", "");
+            // Get id
+            var value = el.children[i].getAttribute('data-value');
+            if (! value) {
+                value = text;
+            }
+            // Item
+            if (text || value) {
+                data.push({ text: text, value: value });
+            }
+        }
+        return data;
+    }
+
+    /**
+     * Get the value of one tag. Null for all tags
+     * @param {?number} index - Tag index number. Null for all tags.
+     * @return {string} value - All tags separated by comma
+     */
+    obj.getValue = function(index) {
+        var value = null;
+
+        if (index != null) {
+            // Get one individual value
+            value = el.children[index].getAttribute('data-value');
+            if (! value) {
+                value = el.children[index].innerText.replace("\n", "");
+            }
+        } else {
+            // Get all
+            var data = [];
+            for (var i = 0; i < el.children.length; i++) {
+                value = el.children[i].innerText.replace("\n", "");
+                if (value) {
+                    data.push(obj.getValue(i));
+                }
+            }
+            value = data.join(',');
+        }
+
+        return value;
+    }
+
+    /**
+     * Set the value of the element based on a string separeted by (,|;|\r\n)
+     * @param {mixed} value - A string or array object with values
+     */
+    obj.setValue = function(mixed) {
+        if (! mixed) {
+            obj.reset();
+        } else {
+            if (el.value != mixed) {
+                if (Array.isArray(mixed)) {
+                    obj.add(mixed);
+                } else {
+                    // Remove whitespaces
+                    var text = (''+mixed).trim();
+                    // Tags
+                    var data = extractTags(text);
+                    // Reset
+                    el.innerHTML = '';
+                    // Add tags to the element
+                    obj.add(data);
+                }
+            }
+        }
+    }
+
+    /**
+     * Reset the data from the element
+     */
+    obj.reset = function() {
+        // Empty class
+        el.classList.add('jtags-empty');
+        // Empty element
+        el.innerHTML = '<div></div>';
+        // Execute changes
+        change();
+    }
+
+    /**
+     * Verify if all tags in the element are valid
+     * @return {boolean}
+     */
+    obj.isValid = function() {
+        var test = 0;
+        for (var i = 0; i < el.children.length; i++) {
+            if (el.children[i].classList.contains('jtags_error')) {
+                test++;
+            }
+        }
+        return test == 0 ? true : false;
+    }
+
+    /**
+     * Add one element from the suggestions to the element
+     * @param {object} item - Node element in the suggestions container
+     */ 
+    obj.selectIndex = function(text, value) {
+        var node = jSuites.getNode();
+        if (node) {
+            // Append text to the caret
+            node.innerText = text;
+            // Set node id
+            if (value) {
+                node.setAttribute('data-value', value);
+            }
+            // Remove any error
+            node.classList.remove('jtags_error');
+            if (! limit()) {
+                // Add new item
+                obj.add('', true);
+            }
+        }
+    }
+
+    /**
+     * Search for suggestions
+     * @param {object} node - Target node for any suggestions
+     */
+    obj.search = function(node) {
+        // Search for
+        var terms = node.innerText;
+    }
+
+    // Destroy tags element
+    obj.destroy = function() {
+        // Bind events
+        el.removeEventListener('mouseup', tagsMouseUp);
+        el.removeEventListener('keydown', tagsKeyDown);
+        el.removeEventListener('keyup', tagsKeyUp);
+        el.removeEventListener('paste', tagsPaste);
+        el.removeEventListener('focus', tagsFocus);
+        el.removeEventListener('blur', tagsBlur);
+
+        // Remove element
+        el.parentNode.removeChild(el);
+    }
+
+    var setFocus = function(node) {
+        if (el.children.length > 1) {
+            var range = document.createRange();
+            var sel = window.getSelection();
+            if (! node) {
+                var node = el.childNodes[el.childNodes.length-1];
+            }
+            range.setStart(node, node.length)
+            range.collapse(true)
+            sel.removeAllRanges()
+            sel.addRange(range)
+            el.scrollLeft = el.scrollWidth;
+        }
+    }
+
+    var createElement = function(label, value, node) {
+        var div = document.createElement('div');
+        div.innerHTML = label ? label : '';
+        if (value) {
+            div.setAttribute('data-value', value);
+        }
+
+        if (node && node.parentNode.classList.contains('jtags')) {
+            el.insertBefore(div, node.nextSibling);
+        } else {
+            el.appendChild(div);
+        }
+
+        return div;
+    }
+
+    var change = function() {
+        // Value
+        var value = obj.getValue();
+
+        if (value != obj.options.value) {
+            obj.options.value = value;
+            if (typeof(obj.options.onchange) == 'function') {
+                obj.options.onchange(el, obj, obj.options.value);
+            }
+
+            // Lemonade JS
+            if (el.value != obj.options.value) {
+                el.value = obj.options.value;
+                if (typeof(el.onchange) == 'function') {
+                    el.onchange({
+                        type: 'change',
+                        target: el,
+                        value: el.value
+                    });
+                }
+            }
+        }
+
+        filter();
+    }
+
+    /**
+     * Filter tags
+     */
+    var filter = function() {
+        for (var i = 0; i < el.children.length; i++) {
+            // Create label design
+            if (! obj.getValue(i)) {
+                el.children[i].classList.remove('jtags_label');
+            } else {
+                el.children[i].classList.add('jtags_label');
+
+                // Validation in place
+                if (typeof(obj.options.validation) == 'function') {
+                    if (obj.getValue(i)) {
+                        if (! obj.options.validation(el.children[i], el.children[i].innerText, el.children[i].getAttribute('data-value'))) {
+                            el.children[i].classList.add('jtags_error');
+                        } else {
+                            el.children[i].classList.remove('jtags_error');
+                        }
+                    } else {
+                        el.children[i].classList.remove('jtags_error');
+                    }
+                } else {
+                    el.children[i].classList.remove('jtags_error');
+                }
+            }
+        }
+
+        isEmpty();
+    }
+
+    var isEmpty = function() {
+        // Can't be empty
+        if (! el.innerText.trim()) {
+            el.innerHTML = '<div></div>';
+            el.classList.add('jtags-empty');
+        } else {
+            el.classList.remove('jtags-empty');
+        }
+    }
+
+    /**
+     * Extract tags from a string
+     * @param {string} text - Raw string
+     * @return {Array} data - Array with extracted tags
+     */
+    var extractTags = function(text) {
+        /** @type {Array} */
+        var data = [];
+
+        /** @type {string} */
+        var word = '';
+
+        // Remove whitespaces
+        text = text.trim();
+
+        if (text) {
+            for (var i = 0; i < text.length; i++) {
+                if (text[i] == ',' || text[i] == ';' || text[i] == '\n') {
+                    if (word) {
+                        data.push(word.trim());
+                        word = '';
+                    }
+                } else {
+                    word += text[i];
+                }
+            }
+
+            if (word) {
+                data.push(word);
+            }
+        }
+
+        return data;
+    }
+
+    /** @type {number} */
+    var anchorOffset = 0;
+
+    /**
+     * Processing event keydown on the element
+     * @param e {object}
+     */
+    var tagsKeyDown = function(e) {
+        // Anchoroffset
+        anchorOffset = window.getSelection().anchorOffset;
+
+        // Verify if is empty
+        isEmpty();
+
+        // Comma
+        if (e.key === 'Tab'  || e.key === ';' || e.key === ',') {
+            var n = window.getSelection().anchorOffset;
+            if (n > 1) {
+                if (limit()) {
+                    if (typeof(obj.options.onlimit) == 'function') {
+                        obj.options.onlimit(obj, obj.options.limit)
+                    }
+                } else {
+                    obj.add('', true);
+                }
+            }
+            e.preventDefault();
+        } else if (e.key == 'Enter') {
+            if (! search || ! search.isOpened()) {
+                var n = window.getSelection().anchorOffset;
+                if (n > 1) {
+                    if (! limit()) {
+                        obj.add('', true);
+                    }
+                }
+                e.preventDefault();
+            }
+        } else if (e.key == 'Backspace') {
+            // Back space - do not let last item to be removed
+            if (el.children.length == 1 && window.getSelection().anchorOffset < 1) {
+                e.preventDefault();
+            }
+        }
+
+        // Search events
+        if (search) {
+            search.keydown(e);
+        }
+    }
+
+    /**
+     * Processing event keyup on the element
+     * @param e {object}
+     */
+    var tagsKeyUp = function(e) {
+        if (e.which == 39) {
+            // Right arrow
+            var n = window.getSelection().anchorOffset;
+            if (n > 1 && n == anchorOffset) {
+                obj.add('', true);
+            }
+        } else if (e.which == 13 || e.which == 38 || e.which == 40) {
+            e.preventDefault();
+        } else {
+            if (search) {
+                search.keyup(e);
+            }
+        }
+
+        filter();
+    }
+
+    /**
+     * Processing event paste on the element
+     * @param e {object}
+     */
+    var tagsPaste =  function(e) {
+        if (e.clipboardData || e.originalEvent.clipboardData) {
+            var text = (e.originalEvent || e).clipboardData.getData('text/plain');
+        } else if (window.clipboardData) {
+            var text = window.clipboardData.getData('Text');
+        }
+
+        var data = extractTags(text);
+        if (data.length > 1) {
+            obj.add(data, true);
+            e.preventDefault();
+        }
+    }
+
+    /**
+     * Processing event mouseup on the element
+     * @param e {object}
+     */
+    var tagsMouseUp = function(e) {
+        if (e.target.parentNode && e.target.parentNode.classList.contains('jtags')) {
+            if (e.target.classList.contains('jtags_label') || e.target.classList.contains('jtags_error')) {
+                var rect = e.target.getBoundingClientRect();
+                if (rect.width - (e.clientX - rect.left) < 16) {
+                    obj.remove(e.target);
+                }
+            }
+        }
+
+        // Set focus in the last item
+        if (e.target == el) {
+            setFocus();
+        }
+    }
+
+    var tagsFocus = function() {
+        if (! el.classList.contains('jtags-focus')) {
+            if (! el.children.length || obj.getValue(el.children.length - 1)) {
+                if (! limit()) {
+                    createElement('');
+                }
+            }
+
+            if (typeof(obj.options.onfocus) == 'function') {
+                obj.options.onfocus(el, obj, obj.getValue());
+            }
+
+            el.classList.add('jtags-focus');
+        }
+    }
+
+    var tagsBlur = function() {
+        if (el.classList.contains('jtags-focus')) {
+            if (search) {
+                search.close();
+            }
+
+            for (var i = 0; i < el.children.length - 1; i++) {
+                // Create label design
+                if (! obj.getValue(i)) {
+                    el.removeChild(el.children[i]);
+                }
+            }
+
+            change();
+
+            el.classList.remove('jtags-focus');
+
+            if (typeof(obj.options.onblur) == 'function') {
+                obj.options.onblur(el, obj, obj.getValue());
+            }
+        }
+    }
+
+    var init = function() {
+        // Bind events
+        if ('touchend' in document.documentElement === true) {
+            el.addEventListener('touchend', tagsMouseUp);
+        } else {
+            el.addEventListener('mouseup', tagsMouseUp);
+        }
+
+        el.addEventListener('keydown', tagsKeyDown);
+        el.addEventListener('keyup', tagsKeyUp);
+        el.addEventListener('paste', tagsPaste);
+        el.addEventListener('focus', tagsFocus);
+        el.addEventListener('blur', tagsBlur);
+
+        // Editable
+        el.setAttribute('contenteditable', true);
+
+        // Prepare container
+        el.classList.add('jtags');
+
+        // Initial options
+        obj.setOptions(options);
+
+        if (typeof(obj.options.onload) == 'function') {
+            obj.options.onload(el, obj);
+        }
+
+        // Change methods
+        el.change = obj.setValue;
+
+        // Global generic value handler
+        el.val = function(val) {
+            if (val === undefined) {
+                return obj.getValue();
+            } else {
+                obj.setValue(val);
+            }
+        }
+
+        el.tags = obj;
+    }
+
+    init();
+
+    return obj;
+});
+
 jSuites.toolbar = (function(el, options) {
-    var obj = {};
+    // New instance
+    var obj = { type:'toolbar' };
     obj.options = {};
 
     // Default configuration
@@ -8056,6 +11046,7 @@ jSuites.toolbar = (function(el, options) {
         badge: false,
         title: false,
         responsive: false,
+        maxWidth: null,
         items: [],
     }
 
@@ -8116,11 +11107,14 @@ jSuites.toolbar = (function(el, options) {
         el.innerHTML = '';
     }
 
-    var toggleState = function() {
-        if (this.classList.contains('jtoolbar-active')) {
-            this.classList.remove('jtoolbar-active');
-        } else {
-            this.classList.add('jtoolbar-active');
+    obj.update = function(a, b) {
+        for (var i = 0; i < toolbarContent.children.length; i++) {
+            // Toolbar element
+            var toolbarItem = toolbarContent.children[i];
+            // State management
+            if (typeof(toolbarItem.updateState) == 'function') {
+                toolbarItem.updateState(el, obj, toolbarItem, a, b);
+            }
         }
     }
 
@@ -8150,8 +11144,8 @@ jSuites.toolbar = (function(el, options) {
             }
 
             // Selected
-            if (items[i].state) {
-                toolbarItem.toggleState = toggleState;
+            if (items[i].updateState) {
+                toolbarItem.updateState = items[i].updateState;
             }
 
             if (items[i].active) {
@@ -8251,16 +11245,21 @@ jSuites.toolbar = (function(el, options) {
 
     obj.refresh = function() {
         if (obj.options.responsive == true) {
+            // Width of the c
+            var rect = el.parentNode.getBoundingClientRect();
+            if (! obj.options.maxWidth) {
+                obj.options.maxWidth = rect.width;
+            }
+            // Max width
+            var width = parseInt(obj.options.maxWidth); 
             // Remove arrow
             toolbarArrow.remove();
             // Move all items to the toolbar
             while (toolbarFloating.firstChild) {
                 toolbarContent.appendChild(toolbarFloating.firstChild);
             }
-            // Width of the c
-            var rect = el.parentNode.getBoundingClientRect();
             // Available parent space
-            var available = rect.width;
+            var available = obj.options.maxWidth;
             // Toolbar is larger than the parent, move elements to the floating element
             if (available < toolbarContent.offsetWidth) {
                 // Give space to the floating element
@@ -8314,6 +11313,137 @@ jSuites.toolbar = (function(el, options) {
 
     return obj;
 });
+
+jSuites.validations = function(value, options) {
+    if (typeof(jSuites.validations[options.type]) === 'function') {
+        return jSuites.validations[options.type](value, options);
+    }
+    return null;
+};
+
+// Legacy
+jSuites.validations.email = function(data) {
+    var pattern = new RegExp(/^[^\s@]+@[^\s@]+\.[^\s@]+$/);
+    return data && pattern.test(data) ? true : false; 
+}
+
+jSuites.validations.required = function(data) {
+    return data.trim() ? true : false;
+}
+
+jSuites.validations.number = function(data) {
+    return jSuites.isNumber(data);
+}
+
+jSuites.validations.login = function(data) {
+    var pattern = new RegExp(/^[a-zA-Z0-9\_\-\.\s+]+$/);
+    return data && pattern.test(data) ? true : false;
+}
+
+/**
+ * Options: Object,
+ * Properties: 
+ * Constraint,
+ * Reference,
+ * Value
+ */
+
+var valueComparisons = function(data, options) {
+    if (options.constraint === '=') {
+        return data === options.reference;
+    }
+    if (options.constraint === '<') {
+        return data < options.reference;
+    }
+    if (options.constraint === '<=') {
+        return data <= options.reference;
+    }
+    if (options.constraint === '>') {
+        return data > options.reference;
+    }
+    if (options.constraint === '>=') {
+        return data >= options.reference;
+    }
+    if (options.constraint === 'between') {
+        return data >= options.reference[0] && data <= options.reference[1];
+    }
+    if (options.constraint === 'not between') {
+        return data < options.reference[0] || data > options.reference[1];
+    }
+
+    return null;
+}
+
+jSuites.validations.number = function(data, options) {
+    if (!jSuites.isNumeric(data)) {
+        return false;
+    }
+
+    if (options === undefined || options.constraint === undefined) {
+        return true;
+    }
+
+    return valueComparisons(data, options);
+}
+
+jSuites.validations.date = function(data, options) {
+    if (new Date(data) == 'Invalid Date') {
+        return false;
+    }
+
+    if (options === undefined || options.constraint === undefined) {
+        return true;
+    } else if (typeof(options) === 'object') {
+        data = new Date(data).getTime();
+
+        if (Array.isArray(options.reference)) {
+            options.reference = options.reference.map(function(reference) {
+                return new Date(reference).getTime();
+            });
+        } else {
+            options.reference = new Date(options.reference).getTime();
+        }
+
+        return valueComparisons(data, options);
+    }
+    return null;
+}
+
+jSuites.validations.itemList = function(data, options) {
+    return options.reference.some(function(reference) {
+        return reference == data;
+    });
+}
+
+jSuites.validations.text = function(data, options) {
+    if (typeof data !== 'string') {
+        return false;
+    }
+
+    if (options === undefined || options.constraint === undefined) {
+        return true;
+    }
+    if (options.constraint === '=') {
+        return data === options.reference;
+    }
+    if (options.constraint === 'contains') {
+        return data.includes(options.reference);
+    }
+    if (options.constraint === 'not contain') {
+        return !data.includes(options.reference);
+    }
+    if (options.constraint === 'email') {
+        return jSuites.validations.email(data);
+    }
+    if (options.constraint === 'url') {
+        var pattern = new RegExp(/(((https?:\/\/)|(www\.))[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|]+)/ig);
+        return pattern.test(data) ? true : false;
+    }
+    return null;
+}
+
+jSuites.validations.constraints = function() {
+}
 
 
 

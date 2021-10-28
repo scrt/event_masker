@@ -61,8 +61,7 @@
       <single>
         <search>
           <query>index IN (_internal, audit) component="EventMasker"
-| dedup _time, scope, result
-| where like (result,"conditions match")
+| where event_message="conditions match" OR event_message="validity period match"
 | stats count</query>
           <earliest>$tk_time.earliest$</earliest>
           <latest>$tk_time.latest$</latest>

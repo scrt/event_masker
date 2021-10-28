@@ -1,6 +1,6 @@
 <form>
   <label>Event Masker Audit Logs</label>
-  <description>Helper Dashboard to check Event Masker rules modification by user. Logs are also available in index=_internal</description>
+  <description>Helper Dashboard to check Event Masker rules modification by user. Logs are also available in index=_internal. You can click on key field value to go to rule conditions</description>
   <fieldset submitButton="false"></fieldset>
   <row>
     <panel>
@@ -26,14 +26,15 @@
       </input>
       <table>
         <search>
-          <query>index=_internal sourcetype="event_masker-rule_logs"FO
+          <query>index=_internal sourcetype="event_masker-rule_logs"
 | search key=$rule$
 | rex mode=sed "s/%[890ABCDEDFabcdef][\d\w]/-/g"
 |  foreach * 
     [| eval &lt;&lt;FIELD&gt;&gt;=urldecode(&lt;&lt;FIELD&gt;&gt;)]
 |  foreach columns,values 
     [| eval &lt;&lt;FIELD&gt;&gt;=split(&lt;&lt;FIELD&gt;&gt;,"¬")]
-| table time, log_level, user, type, key, message, columns, values</query>
+| table time, log_level, user, type, key, message, columns, values
+| sort -time</query>
           <earliest>$tk_time.earliest$</earliest>
           <latest>$tk_time.latest$</latest>
         </search>

@@ -19,11 +19,11 @@ index IN (_internal, audit) component="EventMasker" |fields log_level,scope,rule
   </fieldset>
   <row>
     <panel>
-      <title>Masked Events over time</title>
+      <title>Masked Events by Scope</title>
       <chart>
         <search base="basesearch">
           <query>search
-| dedup _time, scope, rule, event_message
+| where event_message="conditions match" OR event_message="validity period match"
 | timechart count by scope</query>
         </search>
         <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
@@ -64,11 +64,11 @@ index IN (_internal, audit) component="EventMasker" |fields log_level,scope,rule
   </row>
   <row>
     <panel>
-      <title>Scope count</title>
+      <title>Masked Events by Rule</title>
       <table>
         <search base="basesearch">&gt;<query>search
-| dedup _time, scope, event_message
-| stats sparkline count by scope,rule</query>
+| where event_message="conditions match" OR event_message="validity period match"
+| stats sparkline(count,30m) as SparkLine count by scope,rule</query>
         </search>
         <option name="count">15</option>
         <option name="drilldown">none</option>
@@ -76,10 +76,13 @@ index IN (_internal, audit) component="EventMasker" |fields log_level,scope,rule
       </table>
     </panel>
     <panel>
-      <title>Event message type</title>
+      <title>Error message</title>
       <chart>
         <search base="basesearch">
           <query>search log_level=*
+| where NOT event_message IN ("conditions match","validity period match")
+| eval _time=strftime(_time,"%Y-%m-%d %H:%M:%S")
+| dedup  _time scope rule event_message
 | stats count by event_message</query>
         </search>
         <option name="charting.chart">pie</option>
@@ -125,7 +128,7 @@ index IN (_internal, audit) component="EventMasker" |fields log_level,scope,rule
       </input>
       <table>
         <search base="basesearch">&gt;<query>search | search scope="$scope$" rule=$rule$ log_level=$log_level$ sourcetype!="event_masker-rule_logs"
-| eval record=trim(replace(record,"OrderedDict",""))
+| eval record=trim(replace(record,"OrderedDict\(\[",""))
 | eval details=coalesce(conditions,record)
 | table _time, log_level, scope, rule, event_message, details</query>
         </search>
@@ -153,7 +156,10 @@ index IN (_internal, audit) component="EventMasker" |fields log_level,scope,rule
       <table>
         <search base="basesearch">
           <query>search log_level=WARNING
-| table _time, scope, rule, event_message, conditions</query>
+| eval details=coalesce(conditions,record)
+| eval _time=strftime(_time,"%Y-%m-%d %H:%M:%S")
+| dedup  _time scope rule event_message
+| table _time, scope, rule, event_message, details</query>
         </search>
         <option name="count">10</option>
         <option name="refresh.display">progressbar</option>

@@ -155,12 +155,7 @@ Do not forget : All of the conditions must be true for a valid application. Make
 
 * Splunk multi-value (MV) field are supported by Event Masker but at this time, masking rule hide the whole line when conditions are matched.
 
-* Search Head Cluster have not been tested.
-
 * It is possible that importing and exporting takes time and freeze the browser. This will be patched in a future version but for now, take the opportunity to have a coffee :coffee:
-
-* Event Masker has not been tested yet with the new version of Splunk Enterprise Security (6.6.0)
-
 
 # Getting Support
 

@@ -34,9 +34,69 @@
 
 #save {
   float: right;
+  margin-right: 10px;
 }
 
 #dataTable {
   height: 600px;
   overflow: auto;
+}
+
+label, input, textarea {
+  display: block;
+  width: 100%;
+}
+
+label {
+  margin-top: 15px;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  margin:3px;
+}
+
+.full-width{
+  width: 100%;
+}
+
+.justify-center {
+	justify-content: center;
+}
+
+.justify-left {
+    justify-content: start;
+}
+
+.justify-end {
+    justify-content: end;
+}
+
+.row > .col-33 {
+  flex: 0 0 calc(33% - 0.5em);
+
+  
+}
+
+.row > .col-50 {
+  flex: 0 0 calc(50% - 0.5em);
+}
+
+@media screen and (max-width: 500px) {
+  .row > .col {
+    flex: 0 0 100%;
+  }
+  
+  #mainControls {
+    justify-content: center;
+  }
+    
+}
+
+.jexcel > tbody > tr > td > input[type=checkbox]
+{
+    width:12px;
+    margin:auto;
 }

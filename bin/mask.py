@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from __future__ import absolute_import, division, print_function, unicode_literals
+from inspect import _empty
 
 import os
 import sys
@@ -19,7 +20,7 @@ from bin.lib.mask_rule import MaskRule
 
 from splunklib.searchcommands import dispatch, StreamingCommand, Configuration, Option, validators
 
-import logging, logging.handlers, datetime
+import logging, logging.handlers
 import splunk
 
 
@@ -33,7 +34,9 @@ def setup_logging(logging_level: int):
     logging_format = "%(asctime)s %(levelname)s %(message)s"
     splunk_log_handler = logging.handlers.RotatingFileHandler(
         os.path.join(splunk_home, base_log_path, logging_file_name),
-        mode='a'
+        mode='a',
+        maxBytes=25000000,
+        backupCount=5
     )
     splunk_log_handler.setFormatter(logging.Formatter(logging_format))
     logger.addHandler(splunk_log_handler)
@@ -126,7 +129,11 @@ class MaskCommand(StreamingCommand):
         if rules_raw:
             conditions = [MaskRule.from_dict(c) for c in rules_raw]
 
-            match = False     
+            match = False
+            match_once = False
+            event_message = ""
+            error_messages = []
+            count = 0
             
             for record in records:
                 try:
@@ -134,18 +141,22 @@ class MaskCommand(StreamingCommand):
                     if error_messages:
                         if log:
                             for error in error_messages:
-                                logger.warning(f'log_level="WARNING" component=EventMasker - scope="{scope}" rule="{error[0]}" event_message="{error[1]}" record="{conditions}"')
+                                logger.warning(f'log_level="WARNING" component=EventMasker - scope="{scope}" rule="{error[0]}" event_message="{error[1]}" record="{error[2]}"')
                     if should_mask_record:
-                        match = True
+                        match_once = True
                         if log:
                             logger.info(f'log_level="INFO" component=EventMasker - scope="{scope}" rule="{rule}" event_message="{event_message}" record="{record}"')                          
                     else:
                         match = False
                         yield record
                 except BaseException as err:
+                    match = False
                     logger.error(f'log_level="ERROR" component="EventMasker" - scope="{scope}" event_message="{err}"')
-                    yield record 
-            
+                    yield record
+            if not error_messages and not match and not match_once and event_message:
+                if count == 0 :
+                    logger.warning(f'log_level="WARNING" component=EventMasker - scope="{scope}" rule="{rule}" event_message="{event_message}" record="{conditions}"')
+                    count = 1
         else:
             for record in records:
                 yield record

@@ -224,7 +224,7 @@ define(['underscore',
                 var earliest = Math.floor(time / 100) * 100;
                 var latest = Math.ceil(time/100)*100;
                 // Fields we don't want to extract from the raw
-                const excludedFields = ["fidelity", "firstTime", "info_max_time", "info_min_time", "info_search_time", "lastTime", "mitre_id", "process_id", "risk_score", "tactics", "technique", "url" ];
+                const excludedFields = ["fidelity", "firstTime", "info_max_time", "info_min_time", "info_search_time", "lastTime", "mitre_id", "process_id", "risk_score", "tactics", "technique", "url", "OutputEncoding", "_bkt", "_cd","_eventtype_color","_indextime","_kv","_raw","_serial","_si","_sourcetype","_time","avgperhost","calculatedHash","date_hour","date_mday","date_minute","date_month","date_second","date_wday","date_year","date_zone","event_hash","event_id","eventtype","host","index","indexer_guid","linecount","owner","owner_realname","priority","punct","scriptFileStream","security_domain","severity","sourcetype","splunk_server","status","status_default","status_description","status_end","status_group","status_label","stdevperhost","timeendpos","timestartpos","urgency", "rule_id","app","creator","creator_realname","orig_action_name","orig_cd","orig_index","orig_raw","orig_rid","orig_sid","orig_splunk_server","orig_time","source","tag","tag::eventtype","timestamp","cmdlen","annotations","comment","drilldown_earliest","drilldown_earliest_offset","drilldown_latest","drilldown_latest_offset","drilldown_name","drilldown_search","extract_artifacts","investigation_profiles","next_steps","review_time","reviewer","savedsearch_description","rule_name"];
                 var uri = Splunk.util.make_url("/splunkd/__raw/servicesNS/" + this.collection_owner + "/event_masker/search/jobs");
                 var sid = "";
                 jQuery.ajax({
@@ -232,7 +232,10 @@ define(['underscore',
                     type: 'POST',
                     async: false,
                     data : {
-                        search: 'search earliest=' + earliest + ' latest=' + latest + ' index=notable | eval event_hash=md5(_time._raw) | search event_hash='+key
+                        search: 'search `notable`| eval event_hash=md5(_time._raw) | search event_hash='+key,
+                        adhoc_search_level: 'smart',
+                        earliest_time: earliest,
+                        latest_time: latest,
                     },
                     success: function (results) {
                         sid = $(results).find("sid").text()
@@ -248,31 +251,25 @@ define(['underscore',
                     type: 'get',
                     async: false,
                     success: function (results) {
-                        res = results["results"][0]["_raw"]
-                        res = res.split(', ')
-                        res.shift();
-                        
-                        for(i = 0; i < res.length; ++i){
+                        res = results["results"][0]
+
+                        for(var key in res)
+                        {
                             try{
-                                res[i] = res[i].trim();
-                                res[i] = res[i].split("=");
-                                if(excludedFields.indexOf(res[i][0]) == -1){
-                                    res[i][1] = res[i][1].replace(/['"]+/g, '');
-                                    res[i][1] = res[i][1].replaceAll('\\\\\\', '');
-                                    tmpStr = tmpStr + '"' + res[i][0].toString() + '" : "' + res[i][1] + '"' ;
-                                    if(i < res.length - 1){
-                                        tmpStr = tmpStr + ',';
-                                    }
+                                if(excludedFields.indexOf(key) != -1){
+                                    
+                                    delete res[key]
                                 }
+                            
                             }catch(error){
                                 continue;
                             }
                         }
-                        tmpStr = tmpStr + "}";
+
+                                            
                     }.bind(this)
                 });
-                
-                return JSON.parse(tmpStr);
+                return res;
             },
 
             /**
@@ -280,32 +277,45 @@ define(['underscore',
              * @param {*} tmpJson JSON cointaining the title, description, scope and _key.
              */
             loadValues: function(tmpJson){
-                $("#rule-title").val(tmpJson["title"]);
-                $("#rule-description").val(tmpJson["description"]);
+                if(tmpJson["title"]){
+
+                    $("#rule-title").val(tmpJson["title"]);
+                }else{
+                    $("#rule-title").val(tmpJson["rule_title"]);
+                }
+
+                if(tmpJson["description"]){
+
+                    $("#rule-description").val(tmpJson["description"]);
+                }else{
+                    $("#rule-description").val(tmpJson["rule_description"]);
+                }
+
                 if(tmpJson["scope"]){
                     $("#rule-scope").val(tmpJson["scope"]);
                 }else{
                     $("#rule-scope").val(tmpJson["search_name"]);
                 }
+
                 $("#rule-key").val(tmpJson["_key"]);
 
             },
 
             /**
-             * Prepare JSON based on the condition for the table.
+             * Prepare JSON based on the condition for the table for whitelist.
              * @param {*} tmpJson Raw conditions to parse
              * @returns return a JSON formatted for DataTables javascript
              */
             prepareValues: function(tmpJson){
+
                 var tmpStr = "[";
-                var keys = Object.keys(tmpJson);
-                for(var i = 0; i < keys.length; ++i){
-                    if((keys[i] != "title") && (keys[i] != "description") && (keys[i] != "search_name")){
+                for(var key in tmpJson){
+                   
+                    if((key != "rule_title") && (key != "rule_description") && (key != "search_name")){
+
                         tmpStr = tmpStr + 
-                            '{ "check":false, "field":"' + keys[i] + '", "operator": "is", "value" : "' + tmpJson[keys[i]].replaceAll('\\','\\\\') + '", "iscasesensitive":false }'    
-                            if(i < res.length - 1){
-                                tmpStr = tmpStr + ','
-                            }                        
+                            '{"check": false, "field": "' + key + '", "operator": "is", "value": ' + JSON.stringify(tmpJson[key]).replace(/\\\\/g, '\\') + ', "iscasesensitive": false, "comment": "" },'    
+             
                     }
                 }
                 if(tmpStr.substr(tmpStr.length - 1) == ","){
@@ -367,7 +377,7 @@ define(['underscore',
                 }
 
                 var onbefeforepaste = function(instance, data, x, y) {
-                    data = data.replace(/"{1,3}/g, '″', data);
+                    data = data.replace(/"{1,3}/g, '″""', data);
                     return data;
                 }
 
@@ -421,10 +431,15 @@ define(['underscore',
                             source: ["<", ">", "is", "is not", "<=", ">=", "contains", "does not contain", "starts with", "ends with", "matches", "does not match"],
                             autocomplete: "true"
                         },
-                        {data: "value", type: "text", align: "left"},
+                        {
+                            data: "value",
+                            type: "text", 
+                            align: "left"
+                        },
                         {
                             data: "iscasesensitive",
                             type: "checkbox",
+                            align: "center"
                         },
                         {
                             data: "comment", 
